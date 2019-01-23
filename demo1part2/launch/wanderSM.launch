@@ -1,0 +1,13 @@
+<launch>
+    <!--  smooths inputs from cmd_vel_mux/input/teleop_raw to cmd_vel_mux/input/teleop -->
+    <include file="$(find turtlebot_teleop)/launch/includes/velocity_smoother.launch.xml"/>
+
+
+    <arg name="stopping_distance" default="0.8" />
+
+    <node pkg="demo1part2" type="wanderSM.py" name="wander_state_machine">
+        <param name="stop_distance" value="$(arg stopping_distance)" />
+        <remap from="cmd_vel" to="teleop_velocity_smoother/raw_cmd_vel"/>
+    </node>
+
+</launch>

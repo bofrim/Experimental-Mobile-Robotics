@@ -5,7 +5,30 @@ import smach_ros
 import threading
 
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from kobuki_msgs.msg import BumperEvent
+from tf.transformations import decompose_matrix
+from ros_numpy import numpify
+
+
+g_x = None
+g_y = None
+g_z = None
+g_theta = None
+
+def odom_callback(self, msg):
+    global g_x
+    global g_y
+    global g_z
+    global g_theta
+
+    pose = numpify(msg.pose.pose)
+    _, _, angles, _ = decompose_matrix(pose)
+    
+    g_x = msg.pose.pose.position.x
+    g_y = msg.pose.pose.position.y
+    g_z = msg.pose.pose.position.z
+    g_theta = angles[2]
 
 class Forward(smach.State):
     def __init__(self, movement_pub_node):
@@ -22,6 +45,7 @@ class Forward(smach.State):
         if msg.bumper == 1 and msg.state == 1:
             self.bumper_hit = True
         self.mutex.release()
+
 
     def __execute__(self):
         while(True):
@@ -116,6 +140,8 @@ def main():
     state_introspection_server.start()
 
     cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
+    
+    self.odom_sub = rospy.Subscriber('/odom', Odometry, odom_callback)
 
     with state_machine:
         smach.StateMachine.add("FORWARD", Forward(cmd_vel_pub),

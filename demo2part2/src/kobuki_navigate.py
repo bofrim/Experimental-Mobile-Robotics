@@ -81,6 +81,7 @@ class Backup(smach.State):
         for x in range(num_backup_msgs):
             self.kobuki_movement.publish(backup_twist)
         
+        self.kobuki_movement.publish(Twist())
         return 'turn_horizontal'
 
     

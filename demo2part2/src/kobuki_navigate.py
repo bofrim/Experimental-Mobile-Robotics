@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# Standard Python
+from enum import Enum
+
 # ROS Python
 import rospy
 import smach
@@ -19,12 +22,16 @@ ANGULAR_VELOCITY = 0.3
 LINEAR_VELOCITY = 0.2
 TWIST_PUB_FREQ = 10
 
+
 # Eww, Globals
 g_x = None
 g_y = None
 g_z = None
 g_theta = None
+g_lin_vel_mag = None
+g_ang_vel_mag = None
 g_bumper = None
+g_horizontal_preferance = None
 
 
 def odom_callback(msg):
@@ -33,6 +40,8 @@ def odom_callback(msg):
     global g_y
     global g_z
     global g_theta
+    global g_lin_vel_mag
+    global g_ang_vel_mag
 
     pose = numpify(msg.pose.pose)
     _, _, angles, _, _ = decompose_matrix(pose)
@@ -41,6 +50,10 @@ def odom_callback(msg):
     g_y = msg.pose.pose.position.y
     g_z = msg.pose.pose.position.z
     g_theta = angles[2] * 180 / 3.14159
+    lin_vel = msg.twist.twist.linear
+    g_lin_vel_mag = (lin_vel.x ** 2 + lin_vel.y ** 2 + lin_vel.z ** 2) ** 0.5
+    ang_vel = msg.twist.twist.angular
+    g_ang_vel_mag = (ang_vel.x ** 2 + ang_vel.y ** 2 + ang_vel.z ** 2) ** 0.5
 
 
 def bumper_callback(msg):
@@ -49,11 +62,19 @@ def bumper_callback(msg):
     g_bumper = bool(msg.state)
 
 
-def stall_robot(twist_publisher):
+def stall_robot(twist_publisher, error=0.005):
     """Send a few blank messages to the robot to allow it to come to a stop."""
     rate = rospy.Rate(TWIST_PUB_FREQ)
-    for _ in range(3):
+    while g_lin_vel_mag > error and g_ang_vel_mag > error:
+        print("Slow down")
         twist_publisher.publish(Twist())
+        rate.sleep()
+
+class Direction(Enum):
+    North = 0
+    East = 90
+    South = 180
+    West = -90
 
 
 class Forward(smach.State):
@@ -73,7 +94,7 @@ class Forward(smach.State):
         stall_robot(self.kobuki_movement)
         while not g_bumper:
             twist = Twist()
-            twist.linear.x = 0.2
+            twist.linear.x = LINEAR_VELOCITY
             self.kobuki_movement.publish(twist)
 
             if g_x > FINISH_DISTANCE_M:
@@ -93,7 +114,7 @@ class Backup(smach.State):
     def execute(self, userdata):
         stall_robot(self.kobuki_movement)
         backup_twist = Twist()
-        backup_twist.linear.x = -0.2
+        backup_twist.linear.x = -1 * LINEAR_VELOCITY
         num_backup_msgs = 10
 
         for x in range(num_backup_msgs):
@@ -110,13 +131,15 @@ class TurnHorizontal(smach.State):
 
     def execute(self, userdata):
         global g_theta
+        global g_horizontal_preferance
         stall_robot(self.kobuki_movement)
-        if -10 < g_theta < 10:
-            turn_kobuki(90, self.kobuki_movement)
-        elif -80 < g_theta and g_theta < -100:
-            turn_kobuki(90, self.kobuki_movement)
-        elif 80 < g_theta and g_theta < 100:
-            turn_kobuki(-90, self.kobuki_movement)
+        turn_kobuki(g_horizontal_preferance.value, self.kobuki_movement)
+        # if -10 < g_theta < 10:
+        #     turn_kobuki(90, self.kobuki_movement)
+        # elif -80 < g_theta and g_theta < -100:
+        #     turn_kobuki(90, self.kobuki_movement)
+        # elif 80 < g_theta and g_theta < 100:
+        #     turn_kobuki(-90, self.kobuki_movement)
 
         return "move_horizontal"
 
@@ -130,14 +153,20 @@ class Horizontal(smach.State):
     def execute(self, userdata):
         global g_bumper
         global g_y
+        global g_horizontal_preferance
         stall_robot(self.kobuki_movement)
         initial_y = g_y
         while abs(g_y - initial_y) < HORIZONTAL_THRESHOLD_M:
             if g_bumper:
+                # Ran into something while traversing!
+                if g_horizontal_preferance is Direction.East:
+                    g_horizontal_preferance = Direction.West
+                else:
+                    g_horizontal_preferance = Direction.East
                 return "backup"
 
             forward_twist = Twist()
-            forward_twist.linear.x = 0.2
+            forward_twist.linear.x = LINEAR_VELOCITY
             self.kobuki_movement.publish(forward_twist)
             self.rate.sleep()
 
@@ -152,7 +181,7 @@ class TurnForward(smach.State):
     def execute(self, userdata):
         global g_theta
         stall_robot(self.kobuki_movement)
-        turn_kobuki(0, self.kobuki_movement)
+        turn_kobuki(Direction.North.value, self.kobuki_movement)
 
         return "move_forward"
 
@@ -162,28 +191,31 @@ class Finished(smach.State):
         smach.State.__init__(self, outcomes=["exit"])
 
     def execute(self, userdata):
-        stall_robot(self.kobuki_movement)
         # TODO: Play a nice song / flash light
         return "exit"
 
 
 def turn_kobuki(desired_angle, kobuki_pub_node, angle_tolerance=2):
     global g_theta
+    desired_angle = int(desired_angle)
     rate = rospy.Rate(TWIST_PUB_FREQ)
     lower_bound = desired_angle - angle_tolerance
     upper_bound = desired_angle + angle_tolerance
 
     while g_theta < lower_bound or g_theta > upper_bound:
         rotation_direction = (desired_angle - g_theta) / abs(desired_angle - g_theta)
+        rotation_ramp = max(1.5, abs(desired_angle - g_theta) / 30)
 
         twist = Twist()
-        twist.angular.z = rotation_direction * ANGULAR_VELOCITY
+        twist.angular.z = rotation_direction * ANGULAR_VELOCITY * rotation_ramp
 
         kobuki_pub_node.publish(twist)
         rate.sleep()
 
 
 def main():
+    global g_horizontal_preferance
+    g_horizontal_preferance = Direction.East
     rospy.init_node("nav_state_machine")
 
     state_machine = smach.StateMachine(outcomes=["exit"])

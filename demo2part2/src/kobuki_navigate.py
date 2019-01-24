@@ -2,16 +2,19 @@
 import rospy
 import smach
 import smach_ros
+from time import time
 import threading
 
+from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from kobuki_msgs.msg import BumperEvent
 from tf.transformations import decompose_matrix
 from ros_numpy import numpify
 
-ROBOT_WIDTH_M = 0.3
-FINISH_DISTANCE_M = 3
+ROBOT_WIDTH_M = 0.7
+ANGULAR_VELOCITY = 0.3
+FINISH_DISTANCE_M = 4
 TWIST_PUB_FREQ = 10
 HORIZONTAL_THRESHOLD = ROBOT_WIDTH_M * 1.1
 
@@ -21,6 +24,7 @@ g_z = None
 g_theta = None
 
 g_bumper = None
+
 
 def odom_callback(msg):
     global g_x
@@ -34,7 +38,7 @@ def odom_callback(msg):
     g_x = msg.pose.pose.position.x
     g_y = msg.pose.pose.position.y
     g_z = msg.pose.pose.position.z
-    g_theta = angles[2]
+    g_theta = angles[2] * 180 / 3.14159
 
 def bumper_callback(msg):
     global g_bumper
@@ -50,7 +54,7 @@ class Forward(smach.State):
         global g_bumper
         while not g_bumper:
             twist = Twist()
-            twist.linear.x = 1
+            twist.linear.x = 0.2
             self.kobuki_movement.publish(twist)
 
             if g_x > FINISH_DISTANCE_M:
@@ -65,17 +69,19 @@ class Forward(smach.State):
 class Backup(smach.State):
     def __init__(self, movement_pub_node):
         smach.State.__init__(self, outcomes=['turn_horizontal'])
+        self.rate = rospy.Rate(TWIST_PUB_FREQ)
         self.kobuki_movement = movement_pub_node
 
-    def execute(self):
+    def execute(self, userdata):
         #TODO: backup for a set amount of distance
         backup_twist = Twist()
-        backup_twist.linear.x = -1
+        backup_twist.linear.x = -0.2
         num_backup_msgs = 10
 
         for x in range(num_backup_msgs):
             self.kobuki_movement.publish(backup_twist)
-        
+            self.rate.sleep()
+
         self.kobuki_movement.publish(Twist())
         return 'turn_horizontal'
 
@@ -85,23 +91,26 @@ class TurnHorizontal(smach.State):
         smach.State.__init__(self, outcomes=['move_horizontal'])
         self.kobuki_movement = movement_pub_node
 
-    def __execute__(self):
+    def execute(self, userdata):
         global g_theta
 
         if -10 < g_theta < 10:
             turn_kobuki(90, self.kobuki_movement)
+        elif -80 < g_theta and g_theta < -100:
+            turn_kobuki(90, self.kobuki_movement)
         elif 80 < g_theta and g_theta < 100:
             turn_kobuki(-90, self.kobuki_movement)
-        
+
         return 'move_horizontal'
 
 
 class Horizontal(smach.State):
     def __init__(self, movement_pub_node):
-        smach.State.__init__(self, outcomes=['turn_forward','backup'])
+        smach.State.__init__(self, outcomes=['turn_forward', 'backup'])
+        self.rate = rospy.Rate(TWIST_PUB_FREQ)
         self.kobuki_movement = movement_pub_node
 
-    def execute(self):
+    def execute(self, userdata):
         global g_bumper
         global g_y
         initial_y = g_y
@@ -111,19 +120,20 @@ class Horizontal(smach.State):
                 return 'backup'
             
             forward_twist = Twist()
-            forward_twist.linear.x = 1
+            forward_twist.linear.x = 0.2
             self.kobuki_movement.publish(forward_twist)
+            self.rate.sleep()
 
 
         self.kobuki_movement.publish(Twist())
-        return 'success'
+        return 'turn_forward'
 
 class TurnForward(smach.State):
     def __init__(self, movement_pub_node):
         smach.State.__init__(self, outcomes=['move_forward'])
         self.kobuki_movement = movement_pub_node
 
-    def __execute__(self):
+    def execute(self, userdata):
         global g_theta
         turn_kobuki(0, self.kobuki_movement)
 
@@ -133,23 +143,23 @@ class Finished(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['exit'])
         
-    def execute(self):
+    def execute(self, userdata):
         # TODO: Play a nice song / flash light
         return 'exit'
 
 
-def turn_kobuki(desired_angle, kobuki_pub_node):
+def turn_kobuki(desired_angle, kobuki_pub_node, angle_tolerance = 2):
     global g_theta
     rate = rospy.Rate(TWIST_PUB_FREQ)
-    lower_bound = desired_angle - 3
-    upper_bound = desired_angle + 3
+    lower_bound = desired_angle - angle_tolerance
+    upper_bound = desired_angle + angle_tolerance
     
  
     while( g_theta < lower_bound or g_theta > upper_bound):
         rotation_direction = (desired_angle - g_theta) / abs( desired_angle - g_theta)
 
         twist = Twist()
-        twist.angular.z = rotation_direction * 0.2
+        twist.angular.z = rotation_direction * ANGULAR_VELOCITY
 
         kobuki_pub_node.publish(twist)
         rate.sleep()
@@ -166,6 +176,7 @@ def main():
     
     odom_sub = rospy.Subscriber('/odom', Odometry, odom_callback)
     bumper_sub = rospy.Subscriber('/mobile_base/events/bumper', BumperEvent, bumper_callback)
+
 
     with state_machine:
         smach.StateMachine.add("FORWARD", Forward(cmd_vel_pub),

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Standard Python
 from enum import Enum
+from time import time
 
 # ROS Python
 import rospy
@@ -62,13 +63,31 @@ def bumper_callback(msg):
     g_bumper = bool(msg.state)
 
 
-def stall_robot(twist_publisher, error=0.005):
+def stall_robot(twist_publisher, error=0.005, hold_time_s=0.3):
     """Send a few blank messages to the robot to allow it to come to a stop."""
     rate = rospy.Rate(TWIST_PUB_FREQ)
     while g_lin_vel_mag > error and g_ang_vel_mag > error:
-        print("Slow down")
         twist_publisher.publish(Twist())
         rate.sleep()
+    start_time = time()
+    while time() - start_time < hold_time_s:
+        twist_publisher.publish(Twist())
+        rate.sleep()
+    
+def angle_ramp(desired_angle, current_angle, scale=1, ramp_denominator=90):
+    rotation_direction = (desired_angle - current_angle) / abs(desired_angle - current_angle)
+    rotation_ramp = max(2, abs(desired_angle - current_angle) / ramp_denominator)
+
+    return rotation_direction * rotation_ramp * ANGULAR_VELOCITY * scale
+
+def proportional_twist(target_angle, linear_velocity=LINEAR_VELOCITY):
+    """Calculate a tiwst message to target a desired heading."""
+    global g_theta
+    twist = Twist()
+    twist.linear.x = linear_velocity
+    twist.angular.z = angle_ramp(target_angle, g_theta, scale=0.2)
+    return twist
+
 
 class Direction(Enum):
     North = 0
@@ -93,7 +112,7 @@ class Forward(smach.State):
         global g_bumper
         stall_robot(self.kobuki_movement)
         while not g_bumper:
-            twist = Twist()
+            twist = proportional_twist(Direction.North.value)
             twist.linear.x = LINEAR_VELOCITY
             self.kobuki_movement.publish(twist)
 
@@ -195,22 +214,28 @@ class Finished(smach.State):
         return "exit"
 
 
-def turn_kobuki(desired_angle, kobuki_pub_node, angle_tolerance=2):
+def turn_kobuki(desired_angle, kobuki_pub_node, angle_tolerance=2, hold_time_s=1):
     global g_theta
     desired_angle = int(desired_angle)
     rate = rospy.Rate(TWIST_PUB_FREQ)
     lower_bound = desired_angle - angle_tolerance
     upper_bound = desired_angle + angle_tolerance
+    
+    def send_twist(scale=1):
+        twist = Twist()
+        twist.angular.z = angle_ramp(desired_angle, g_theta, scale=scale)
+        kobuki_pub_node.publish(twist)
 
     while g_theta < lower_bound or g_theta > upper_bound:
-        rotation_direction = (desired_angle - g_theta) / abs(desired_angle - g_theta)
-        rotation_ramp = max(1.5, abs(desired_angle - g_theta) / 30)
-
-        twist = Twist()
-        twist.angular.z = rotation_direction * ANGULAR_VELOCITY * rotation_ramp
-
-        kobuki_pub_node.publish(twist)
+        send_twist()
         rate.sleep()
+    
+    stable_time = time()
+    while time() - stable_time < hold_time_s:
+        send_twist(scale=0.1)
+        rate.sleep()
+    
+
 
 
 def main():

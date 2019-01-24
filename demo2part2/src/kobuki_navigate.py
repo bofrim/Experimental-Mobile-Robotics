@@ -184,9 +184,8 @@ class Horizontal(smach.State):
                     g_horizontal_preferance = Direction.East
                 return "backup"
 
-            forward_twist = Twist()
-            forward_twist.linear.x = LINEAR_VELOCITY
-            self.kobuki_movement.publish(forward_twist)
+            twist = proportional_twist(g_horizontal_preferance.value)
+            self.kobuki_movement.publish(twist)
             self.rate.sleep()
 
         return "turn_forward"

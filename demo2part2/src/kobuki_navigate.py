@@ -10,8 +10,10 @@ from kobuki_msgs.msg import BumperEvent
 from tf.transformations import decompose_matrix
 from ros_numpy import numpify
 
+ROBOT_WIDTH_M = 0.3
 FINISH_DISTANCE_M = 3
 TWIST_PUB_FREQ = 10
+HORIZONTAL_THRESHOLD = ROBOT_WIDTH_M * 1.1
 
 g_x = None
 g_y = None
@@ -87,9 +89,9 @@ class TurnHorizontal(smach.State):
         global g_theta
 
         if -10 < g_theta < 10:
-            turn_kobuki(90, self.kobuki_movement, None)
+            turn_kobuki(90, self.kobuki_movement)
         elif 80 < g_theta and g_theta < 100:
-            turn_kobuki(-90, self.kobuki_movement, None)
+            turn_kobuki(-90, self.kobuki_movement)
         
         return 'move_horizontal'
 
@@ -99,14 +101,21 @@ class Horizontal(smach.State):
         smach.State.__init__(self, outcomes=['turn_forward','backup'])
         self.kobuki_movement = movement_pub_node
 
-
     def execute(self):
         global g_bumper
-        if g_bumper:
-            return 'backup'
+        global g_y
+        initial_y = g_y
+        while abs(g_y - initial_y) < HORIZONTAL_THRESHOLD:
+            if g_bumper:
+                self.kobuki_movement.publish(Twist())
+                return 'backup'
+            
+            forward_twist = Twist()
+            forward_twist.linear.x = 1
+            self.kobuki_movement.publish(forward_twist)
 
-        #TODO: Drive horizontal for set amount of distance
 
+        self.kobuki_movement.publish(Twist())
         return 'success'
 
 class TurnForward(smach.State):
@@ -116,7 +125,7 @@ class TurnForward(smach.State):
 
     def __execute__(self):
         global g_theta
-        turn_kobuki(0, self.kobuki_movement, None)
+        turn_kobuki(0, self.kobuki_movement)
 
         return 'move_forward'
 
@@ -129,10 +138,12 @@ class Finished(smach.State):
         return 'exit'
 
 
-def turn_kobuki(desired_angle, kobuki_pub_node, pub_rate):
+def turn_kobuki(desired_angle, kobuki_pub_node):
     global g_theta
+    rate = rospy.Rate(TWIST_PUB_FREQ)
     lower_bound = desired_angle - 3
     upper_bound = desired_angle + 3
+    
  
     while( g_theta < lower_bound or g_theta > upper_bound):
         rotation_direction = (desired_angle - g_theta) / abs( desired_angle - g_theta)
@@ -141,6 +152,7 @@ def turn_kobuki(desired_angle, kobuki_pub_node, pub_rate):
         twist.angular.z = rotation_direction * 0.2
 
         kobuki_pub_node.publish(twist)
+        rate.sleep()
              
 
 def main():

@@ -1,10 +1,8 @@
 #!/usr/bin/env python
+# ROS Python
 import rospy
 import smach
 import smach_ros
-from time import time
-import threading
-
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -12,21 +10,25 @@ from kobuki_msgs.msg import BumperEvent
 from tf.transformations import decompose_matrix
 from ros_numpy import numpify
 
-ROBOT_WIDTH_M = 0.7
+# Constants
+METER_SCALE = 2
+ROBOT_WIDTH_M = 0.35 * METER_SCALE
+FINISH_DISTANCE_M = 3 * METER_SCALE
+HORIZONTAL_THRESHOLD_M = ROBOT_WIDTH_M * 1.1
 ANGULAR_VELOCITY = 0.3
-FINISH_DISTANCE_M = 4
+LINEAR_VELOCITY = 0.2
 TWIST_PUB_FREQ = 10
-HORIZONTAL_THRESHOLD = ROBOT_WIDTH_M * 1.1
 
+# Eww, Globals
 g_x = None
 g_y = None
 g_z = None
 g_theta = None
-
 g_bumper = None
 
 
 def odom_callback(msg):
+    """Callback for when odometry data is received."""
     global g_x
     global g_y
     global g_z
@@ -42,11 +44,25 @@ def odom_callback(msg):
 
 
 def bumper_callback(msg):
+    """Callback for when bumper data is received."""
     global g_bumper
     g_bumper = bool(msg.state)
 
 
+def stall_robot(twist_publisher):
+    """Send a few blank messages to the robot to allow it to come to a stop."""
+    rate = rospy.Rate(TWIST_PUB_FREQ)
+    for _ in range(3):
+        twist_publisher.publish(Twist())
+
+
 class Forward(smach.State):
+    """In the forward state, the robot will move forward until it hits something.
+
+    If the robot reaches it's goal distance, it succeeds. If it hits something beore
+    crossing this finish line, it will backup a little bit before turning.
+    """
+
     def __init__(self, movement_pub_node):
         smach.State.__init__(self, outcomes=["backup", "finished"])
         self.rate = rospy.Rate(TWIST_PUB_FREQ)
@@ -54,6 +70,7 @@ class Forward(smach.State):
 
     def execute(self, userdata):
         global g_bumper
+        stall_robot(self.kobuki_movement)
         while not g_bumper:
             twist = Twist()
             twist.linear.x = 0.2
@@ -64,7 +81,6 @@ class Forward(smach.State):
 
             self.rate.sleep()
 
-        self.kobuki_movement.publish(Twist())
         return "backup"
 
 
@@ -75,7 +91,7 @@ class Backup(smach.State):
         self.kobuki_movement = movement_pub_node
 
     def execute(self, userdata):
-        # TODO: backup for a set amount of distance
+        stall_robot(self.kobuki_movement)
         backup_twist = Twist()
         backup_twist.linear.x = -0.2
         num_backup_msgs = 10
@@ -84,7 +100,6 @@ class Backup(smach.State):
             self.kobuki_movement.publish(backup_twist)
             self.rate.sleep()
 
-        self.kobuki_movement.publish(Twist())
         return "turn_horizontal"
 
 
@@ -95,7 +110,7 @@ class TurnHorizontal(smach.State):
 
     def execute(self, userdata):
         global g_theta
-
+        stall_robot(self.kobuki_movement)
         if -10 < g_theta < 10:
             turn_kobuki(90, self.kobuki_movement)
         elif -80 < g_theta and g_theta < -100:
@@ -115,10 +130,10 @@ class Horizontal(smach.State):
     def execute(self, userdata):
         global g_bumper
         global g_y
+        stall_robot(self.kobuki_movement)
         initial_y = g_y
-        while abs(g_y - initial_y) < HORIZONTAL_THRESHOLD:
+        while abs(g_y - initial_y) < HORIZONTAL_THRESHOLD_M:
             if g_bumper:
-                self.kobuki_movement.publish(Twist())
                 return "backup"
 
             forward_twist = Twist()
@@ -126,7 +141,6 @@ class Horizontal(smach.State):
             self.kobuki_movement.publish(forward_twist)
             self.rate.sleep()
 
-        self.kobuki_movement.publish(Twist())
         return "turn_forward"
 
 
@@ -137,6 +151,7 @@ class TurnForward(smach.State):
 
     def execute(self, userdata):
         global g_theta
+        stall_robot(self.kobuki_movement)
         turn_kobuki(0, self.kobuki_movement)
 
         return "move_forward"
@@ -147,6 +162,7 @@ class Finished(smach.State):
         smach.State.__init__(self, outcomes=["exit"])
 
     def execute(self, userdata):
+        stall_robot(self.kobuki_movement)
         # TODO: Play a nice song / flash light
         return "exit"
 

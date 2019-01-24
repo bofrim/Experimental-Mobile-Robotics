@@ -82,9 +82,14 @@ class TurnHorizontal(smach.State):
         smach.State.__init__(self, outcomes=['move_horizontal'])
         self.kobuki_movement = movement_pub_node
 
-    def execute(self):
-        #TODO: Determine direction
-        # Eiter turn 90 degrees or 180 degrees
+    def __execute__(self):
+        global g_theta
+
+        if -10 < g_theta < 10:
+            turn_kobuki(90)
+        else if 80 < g_theta < 100:
+            turn_kobuki(-90)
+        
         return 'move_horizontal'
 
 
@@ -118,9 +123,10 @@ class TurnForward(smach.State):
         smach.State.__init__(self, outcomes=['move_forward'])
         self.kobuki_movement = movement_pub_node
 
-    def execute(self):
-        # TODO: Determine direction to turn
-        # TODO: Turn 90 degrees
+    def __execute__(self):
+        global g_theta
+        turn_kobuki(0, self.kobuki_movement, None)
+
         return 'move_forward'
 
 class Finished(smach.State):
@@ -131,6 +137,23 @@ class Finished(smach.State):
         # TODO: Play a nice song / flash light
         return 'exit'
 
+
+def turn_kobuki(desired_angle, kobuki_pub_node, pub_rate):
+    global g_theta
+    lower_bound = desired_angle - 3
+    upper_bound = desired_angle + 3
+ 
+    while( g_theta < lower_bound or g_theta > upper_bound):
+        rotation_direction = (desired_angle - g_theta) / abs( desired_angle - g_theta)
+
+        twist = Twist()
+        twist.angular.z = rotation_direction * 0.2
+
+        kobuki_pub_node.publish(twist)
+
+        #TODO: add rate
+        
+        
 
 def main():
     rospy.init_node('nav_state_machine')

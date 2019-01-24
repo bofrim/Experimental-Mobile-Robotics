@@ -16,14 +16,14 @@ g_y = None
 g_z = None
 g_theta = None
 
-def odom_callback(self, msg):
+def odom_callback(msg):
     global g_x
     global g_y
     global g_z
     global g_theta
 
     pose = numpify(msg.pose.pose)
-    _, _, angles, _ = decompose_matrix(pose)
+    _, _, angles, _, _ = decompose_matrix(pose)
     
     g_x = msg.pose.pose.position.x
     g_y = msg.pose.pose.position.y
@@ -74,6 +74,13 @@ class Backup(smach.State):
 
     def __execute__(self):
         #TODO: backup for a set amount of distance
+        backup_twist = Twist()
+        backup_twist.linear.x = -1
+        num_backup_msgs = 10
+
+        for x in range(num_backup_msgs):
+            self.kobuki_movement.publish(backup_twist)
+        
         return 'turn_horizontal'
 
     
@@ -90,7 +97,7 @@ class TurnHorizontal(smach.State):
 
 class Horizontal(smach.State):
     def __init__(self, movement_pub_node):
-        smach.State.__init__(self, outcomes=['success','backup'])
+        smach.State.__init__(self, outcomes=['turn_forward','backup'])
         self.mutex = threading.Lock()
 
         self.bumper_hit = False
@@ -141,7 +148,7 @@ def main():
 
     cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
     
-    self.odom_sub = rospy.Subscriber('/odom', Odometry, odom_callback)
+    odom_sub = rospy.Subscriber('/odom', Odometry, odom_callback)
 
     with state_machine:
         smach.StateMachine.add("FORWARD", Forward(cmd_vel_pub),
@@ -161,11 +168,13 @@ def main():
         smach.StateMachine.add("TURN_FORWARD", TurnForward(cmd_vel_pub),
                                 transitions={"move_forward": "FORWARD"})
 
-        smach.StateMachine.add("FINISHED", TurnForward(cmd_vel_pub),
+        smach.StateMachine.add("FINISHED", Finished(),
                                 transitions={"exit": "exit"})
 
     state_machine.execute()
+
     state_introspection_server.stop()
+
                                     
 if __name__ == '__main__':
     main()

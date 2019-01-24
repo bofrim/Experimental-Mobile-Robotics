@@ -1,0 +1,10 @@
+<launch>
+    <arg name="world_file" default="$(env TURTLEBOT_GAZEBO_WORLD_FILE)"/>
+    <include file="$(find turtlebot_gazebo)/launch/turtlebot_world.launch">
+        <arg name="world_name" value="$(arg world_file)"/>
+    </include>
+
+    <node pkg="demo2part2" type="kobuki_navigate.py" name="kobuki_nagivate"/>
+
+    <remap from="/cmd_vel_mux" to="/cmd_vel_mux/input/teleop"/>
+</launch>

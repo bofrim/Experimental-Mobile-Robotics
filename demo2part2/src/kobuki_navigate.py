@@ -15,9 +15,9 @@ from tf.transformations import decompose_matrix
 from ros_numpy import numpify
 
 # Constants
-METER_SCALE = 2
+METER_SCALE = 1
 ROBOT_WIDTH_M = 0.35 * METER_SCALE
-FINISH_DISTANCE_M = 3 * METER_SCALE
+FINISH_DISTANCE_M = 3 * METER_SCALE + ROBOT_WIDTH_M
 HORIZONTAL_THRESHOLD_M = ROBOT_WIDTH_M * 1.1
 ANGULAR_VELOCITY = 0.3
 LINEAR_VELOCITY = 0.2
@@ -75,8 +75,11 @@ def stall_robot(twist_publisher, error=0.005, hold_time_s=0.3):
         rate.sleep()
     
 def angle_ramp(desired_angle, current_angle, scale=1, ramp_denominator=90):
-    rotation_direction = (desired_angle - current_angle) / abs(desired_angle - current_angle)
-    rotation_ramp = max(2, abs(desired_angle - current_angle) / ramp_denominator)
+    rotation_direction = 1
+    rotation_ramp = 0
+    if desired_angle != current_angle:
+        rotation_direction = (desired_angle - current_angle) / abs(desired_angle - current_angle)
+        rotation_ramp = max(2, abs(desired_angle - current_angle) / ramp_denominator)
 
     return rotation_direction * rotation_ramp * ANGULAR_VELOCITY * scale
 

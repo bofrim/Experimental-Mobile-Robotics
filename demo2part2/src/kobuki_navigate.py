@@ -45,6 +45,7 @@ class Forward(smach.State):
         self.kobuki_movement = movement_pub_node
 
     def execute(self, userdata):
+        global g_bumper
         while not g_bumper:
             twist = Twist()
             twist.linear.x = 1
@@ -96,23 +97,13 @@ class TurnHorizontal(smach.State):
 class Horizontal(smach.State):
     def __init__(self, movement_pub_node):
         smach.State.__init__(self, outcomes=['turn_forward','backup'])
-        self.mutex = threading.Lock()
-
-        self.bumper_hit = False
-        self.bumper_node = rospy.Subscriber('/mobile_base/events/bumper', BumperEvent, self.bumper_callback)
         self.kobuki_movement = movement_pub_node
 
-    def bumper_callback(self, msg):
-        self.mutex.acquire()
-        if msg.bumper == 1 and msg.state == 1:
-            self.bumper_hit = True
-        self.mutex.release()
 
     def execute(self):
-        self.mutex.acquire()
-        if self.bumper_hit:
+        global g_bumper
+        if g_bumper:
             return 'backup'
-        self.mutex.release()
 
         #TODO: Drive horizontal for set amount of distance
 

@@ -86,9 +86,9 @@ class TurnHorizontal(smach.State):
         global g_theta
 
         if -10 < g_theta < 10:
-            turn_kobuki(90)
-        else if 80 < g_theta < 100:
-            turn_kobuki(-90)
+            turn_kobuki(90, self.kobuki_movement, None)
+        elif 80 < g_theta and g_theta < 100:
+            turn_kobuki(-90, self.kobuki_movement, None)
         
         return 'move_horizontal'
 
@@ -150,10 +150,7 @@ def turn_kobuki(desired_angle, kobuki_pub_node, pub_rate):
         twist.angular.z = rotation_direction * 0.2
 
         kobuki_pub_node.publish(twist)
-
-        #TODO: add rate
-        
-        
+             
 
 def main():
     rospy.init_node('nav_state_machine')

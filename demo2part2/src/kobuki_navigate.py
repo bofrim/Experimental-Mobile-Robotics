@@ -10,11 +10,15 @@ from kobuki_msgs.msg import BumperEvent
 from tf.transformations import decompose_matrix
 from ros_numpy import numpify
 
+FINISH_DISTANCE_M = 3
+TWIST_PUB_FREQ = 10
 
 g_x = None
 g_y = None
 g_z = None
 g_theta = None
+
+g_bumper = None
 
 def odom_callback(msg):
     global g_x
@@ -30,41 +34,29 @@ def odom_callback(msg):
     g_z = msg.pose.pose.position.z
     g_theta = angles[2]
 
+def bumper_callback(msg):
+    global g_bumper
+    g_bumper = bool(msg.state)
+
 class Forward(smach.State):
     def __init__(self, movement_pub_node):
         smach.State.__init__(self, outcomes=['backup', 'finished'])
-      
-        self.mutex = threading.Lock()
-
-        self.bumper_hit = False
-        self.bumper_node = rospy.Subscriber('/mobile_base/events/bumper', BumperEvent, self.bumper_callback)
+        self.rate = rospy.Rate(TWIST_PUB_FREQ)
         self.kobuki_movement = movement_pub_node
 
-    def bumper_callback(self, msg):
-        self.mutex.acquire()
-        if msg.bumper == 1 and msg.state == 1:
-            self.bumper_hit = True
-        self.mutex.release()
-
-
-    def __execute__(self):
-        while(True):
-            self.mutex.acquire()
-            if self.bumper_hit:
-                return 'backup'            
-            self.mutex.release()
-
+    def execute(self, userdata):
+        while not g_bumper:
             twist = Twist()
             twist.linear.x = 1
-
-            # TODO: Read and store data from encoders
-
-            ''' TODO:
-            if self.position.x == 3:
-                return 'finished'
-            '''
-
             self.kobuki_movement.publish(twist)
+
+            if g_x > FINISH_DISTANCE_M:
+                return 'finished'
+            
+            self.rate.sleep()
+
+        self.kobuki_movement.publish(Twist())
+        return 'backup'            
 
 
 class Backup(smach.State):
@@ -72,7 +64,7 @@ class Backup(smach.State):
         smach.State.__init__(self, outcomes=['turn_horizontal'])
         self.kobuki_movement = movement_pub_node
 
-    def __execute__(self):
+    def execute(self):
         #TODO: backup for a set amount of distance
         backup_twist = Twist()
         backup_twist.linear.x = -1
@@ -90,7 +82,7 @@ class TurnHorizontal(smach.State):
         smach.State.__init__(self, outcomes=['move_horizontal'])
         self.kobuki_movement = movement_pub_node
 
-    def __execute__(self):
+    def execute(self):
         #TODO: Determine direction
         # Eiter turn 90 degrees or 180 degrees
         return 'move_horizontal'
@@ -111,7 +103,7 @@ class Horizontal(smach.State):
             self.bumper_hit = True
         self.mutex.release()
 
-    def __execute__(self):
+    def execute(self):
         self.mutex.acquire()
         if self.bumper_hit:
             return 'backup'
@@ -126,7 +118,7 @@ class TurnForward(smach.State):
         smach.State.__init__(self, outcomes=['move_forward'])
         self.kobuki_movement = movement_pub_node
 
-    def __execute__(self):
+    def execute(self):
         # TODO: Determine direction to turn
         # TODO: Turn 90 degrees
         return 'move_forward'
@@ -135,7 +127,7 @@ class Finished(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['exit'])
         
-    def __execute__(self):
+    def execute(self):
         # TODO: Play a nice song / flash light
         return 'exit'
 
@@ -150,6 +142,7 @@ def main():
     cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
     
     odom_sub = rospy.Subscriber('/odom', Odometry, odom_callback)
+    bumper_sub = rospy.Subscriber('/mobile_base/events/bumper', BumperEvent, bumper_callback)
 
     with state_machine:
         smach.StateMachine.add("FORWARD", Forward(cmd_vel_pub),

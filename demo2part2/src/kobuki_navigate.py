@@ -13,6 +13,7 @@ from nav_msgs.msg import Odometry
 from kobuki_msgs.msg import BumperEvent
 from tf.transformations import decompose_matrix
 from ros_numpy import numpify
+from kobuki_msgs.msg import Sound
 
 # Constants
 METER_SCALE = 1
@@ -210,9 +211,17 @@ class TurnForward(smach.State):
 class Finished(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=["exit"])
+        self.sound_node = rospy.Publisher("commands/sound", Sound, queue_size=1)
+        self.rate = rospy.Rate(1)
 
     def execute(self, userdata):
-        # TODO: Play a nice song / flash light
+        sound = Sound()
+        sound.value = 3
+
+        for _ in range(0, 4):
+            self.sound_node.publish(sound)
+            self.rate.sleep()
+
         return "exit"
 
 

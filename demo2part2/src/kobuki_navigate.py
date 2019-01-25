@@ -74,15 +74,19 @@ def stall_robot(twist_publisher, error=0.005, hold_time_s=0.3):
     while time() - start_time < hold_time_s:
         twist_publisher.publish(Twist())
         rate.sleep()
-    
+
+
 def angle_ramp(desired_angle, current_angle, scale=1, ramp_denominator=90):
     rotation_direction = 1
     rotation_ramp = 0
     if desired_angle != current_angle:
-        rotation_direction = (desired_angle - current_angle) / abs(desired_angle - current_angle)
+        rotation_direction = (desired_angle - current_angle) / abs(
+            desired_angle - current_angle
+        )
         rotation_ramp = max(2, abs(desired_angle - current_angle) / ramp_denominator)
 
     return rotation_direction * rotation_ramp * ANGULAR_VELOCITY * scale
+
 
 def proportional_twist(target_angle, linear_velocity=LINEAR_VELOCITY):
     """Calculate a tiwst message to target a desired heading."""
@@ -220,11 +224,10 @@ class Finished(smach.State):
         sound.value = 3
         turn_kobuki(Direction.South.value, self.kobuki_movement)
 
+        # sound = Sound()
+        # sound.value = 3
 
-        #sound = Sound()
-        #sound.value = 3
-
-        #for _ in range(0, 4):
+        # for _ in range(0, 4):
         #    self.sound_node.publish(sound)
         #    self.rate.sleep()
 
@@ -237,7 +240,7 @@ def turn_kobuki(desired_angle, kobuki_pub_node, angle_tolerance=2, hold_time_s=1
     rate = rospy.Rate(TWIST_PUB_FREQ)
     lower_bound = desired_angle - angle_tolerance
     upper_bound = desired_angle + angle_tolerance
-    
+
     def send_twist(scale=1):
         twist = Twist()
         twist.angular.z = angle_ramp(desired_angle, g_theta, scale=scale)
@@ -246,13 +249,11 @@ def turn_kobuki(desired_angle, kobuki_pub_node, angle_tolerance=2, hold_time_s=1
     while g_theta < lower_bound or g_theta > upper_bound:
         send_twist()
         rate.sleep()
-    
+
     stable_time = time()
     while time() - stable_time < hold_time_s:
         send_twist(scale=0.1)
         rate.sleep()
-    
-
 
 
 def main():
@@ -304,13 +305,13 @@ def main():
             transitions={"move_forward": "FORWARD"},
         )
 
-        smach.StateMachine.add("FINISHED", Finished(cmd_vel_pub), transitions={"exit": "exit"})
+        smach.StateMachine.add(
+            "FINISHED", Finished(cmd_vel_pub), transitions={"exit": "exit"}
+        )
 
     state_machine.execute()
 
-
     state_introspection_server.stop()
-
 
 
 if __name__ == "__main__":

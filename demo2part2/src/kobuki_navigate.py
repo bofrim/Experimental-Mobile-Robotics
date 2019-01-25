@@ -209,18 +209,24 @@ class TurnForward(smach.State):
 
 
 class Finished(smach.State):
-    def __init__(self):
+    def __init__(self, movement_pub_node):
         smach.State.__init__(self, outcomes=["exit"])
         self.sound_node = rospy.Publisher("commands/sound", Sound, queue_size=1)
-        self.rate = rospy.Rate(1)
+        self.rate = rospy.Rate(0.5)
+        self.kobuki_movement = movement_pub_node
 
     def execute(self, userdata):
         sound = Sound()
         sound.value = 3
+        turn_kobuki(Direction.South.value, self.kobuki_movement)
 
-        for _ in range(0, 4):
-            self.sound_node.publish(sound)
-            self.rate.sleep()
+
+        #sound = Sound()
+        #sound.value = 3
+
+        #for _ in range(0, 4):
+        #    self.sound_node.publish(sound)
+        #    self.rate.sleep()
 
         return "exit"
 
@@ -298,11 +304,13 @@ def main():
             transitions={"move_forward": "FORWARD"},
         )
 
-        smach.StateMachine.add("FINISHED", Finished(), transitions={"exit": "exit"})
+        smach.StateMachine.add("FINISHED", Finished(cmd_vel_pub), transitions={"exit": "exit"})
 
     state_machine.execute()
 
+
     state_introspection_server.stop()
+
 
 
 if __name__ == "__main__":

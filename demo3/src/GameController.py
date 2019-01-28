@@ -29,7 +29,7 @@ class GameController:
             callback_func(value=message.axes[index])
 
 
-class LogitechGameController:
+class LogitechGameController(GameController):
     """A skelaton implementation for a logitech game controller.
 
     Either inherit from this class and implement custom logic, or instantiate this

@@ -1,2 +1,2 @@
-int32 magnitude
-int32 angle
+float32 magnitude
+float32 angle

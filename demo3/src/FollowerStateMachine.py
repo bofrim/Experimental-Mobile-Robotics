@@ -5,7 +5,7 @@
 import rospy
 import smach
 from sensor_msgs.msg import Joy
-from geometry_msgs.msg import Twist, Vector3
+from geometry_msgs.msg import Twist
 
 # This Package Python
 from demo3.msg import Vector
@@ -22,7 +22,9 @@ class FollowerStateMachine:
         """Setup the state machine."""
         # Setup ROS functionality
         self.rate = rospy.Rate(MOVER_FREQ_HZ)
-        self.object_decection_subscriber = rospy.Subscriber("/focusedObject", Vector, self.update_target)
+        self.object_decection_subscriber = rospy.Subscriber(
+            "/focusedObject", Vector, self.update_target
+        )
         self.cmd_vel_publisher = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
 
         # Setup State Variables:
@@ -51,7 +53,7 @@ class FollowerStateMachine:
             smach.StateMachine.add(
                 "SEARCHING", self.searching_state(), transitions=all_states
             )
-        
+
         # Setup Other Variables
         self.gameController = LogitechGameController()
         self.gameController.x_button_callback = self.set_should_follow
@@ -60,22 +62,21 @@ class FollowerStateMachine:
         self.gameController.y_button_callback = self.set_should_search
 
         self.target_location = Vector()
-    
+
     def startup(self):
         """Start the state machine."""
         self.state_machine.execute()
-    
-    
+
     def idle_state(self):
         """Do nothing."""
         self.rate.sleep()
         return self.next_state
-    
+
     def following_state(self, user_data):
         """Follow another robot"""
         self.rate.sleep()
         return self.next_state
-    
+
     def tracking_state(self, user_data):
         """Spin the robot so that it is allways looking at another robot."""
         output_twist = Twist()
@@ -86,13 +87,12 @@ class FollowerStateMachine:
         self.cmd_vel_publisher.publish(output_twist)
         self.rate.sleep()
         return self.next_state
-        
-    
+
     def searching_state(self, user_data):
         """Quick try to find the other robot!"""
         self.rate.sleep()
         return self.next_state
-    
+
     def update_target(self, vector_messge):
         """Recive a message from the object detection node."""
         self.target_location = vector_messge
@@ -101,7 +101,7 @@ class FollowerStateMachine:
         rospy.loginfo("Should Stop.")
         self.should_stop = True
         self.should_follow = self.should_search = self.should_track = False
-    
+
     def set_should_follow():
         rospy.loginfo("Should Follow.")
         self.should_follow = True
@@ -116,7 +116,7 @@ class FollowerStateMachine:
         rospy.loginfo("Should Track.")
         self.should_track = True
         self.should_stop = self.should_follow = self.should_search = False
-        
+
     @property
     def next_state(self):
         """Choose which state should be transitioned to."""
@@ -131,6 +131,7 @@ class FollowerStateMachine:
 
         rospy.logerr("Could not determine next state. Exiting.")
         return "exit"
+
 
 if __name__ == "__main__":
     follower_sm = FollowerStateMachine()

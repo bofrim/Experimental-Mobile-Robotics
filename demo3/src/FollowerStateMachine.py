@@ -12,16 +12,27 @@ from demo3.msg import Vector
 from GameController import LogitechGameController
 
 # Constants
-MOVER_FREQ_HZ = 10
+FOLLOWER_FREQ_HZ = 10
 
 
-class FollowerStateMachine:
+class wrapper_state(smach.State):
+    def __init__(self, callable_func, outcomes):
+        """Init the state."""
+        smach.State.__init__(self, outcomes=outcomes)
+        self.execute_func = callable_func
+
+    def execute(self, callable_func):
+        """Run the state."""
+        return self.execute_func()
+
+
+class FollowerStateMachine(object):
     """A Stare Machine for the mover node."""
 
     def __init__(self):
         """Setup the state machine."""
         # Setup ROS functionality
-        self.rate = rospy.Rate(MOVER_FREQ_HZ)
+        self.rate = rospy.Rate(FOLLOWER_FREQ_HZ)
         self.object_decection_subscriber = rospy.Subscriber(
             "/focusedObject", Vector, self.update_target
         )
@@ -39,19 +50,29 @@ class FollowerStateMachine:
             "stop": "IDLE",
             "track": "TRACKING",
             "search": "SEARCHING",
-            "follow": "FOLLOW",
+            "follow": "FOLLOWING",
             "exit": "EXIT",
         }
-        with state_machine:
-            smach.StateMachine.add("IDLE", self.idle_state(), transitions=all_states)
+        with self.state_machine:
             smach.StateMachine.add(
-                "FOLLOWING", self.following_state(), transitions=all_states
+                "IDLE",
+                wrapper_state(self.idle_state, all_states),
+                transitions=all_states,
             )
             smach.StateMachine.add(
-                "TRACKING", self.tracking_state(), transitions=all_states
+                "FOLLOWING",
+                wrapper_state(self.following_state, all_states),
+                transitions=all_states,
             )
             smach.StateMachine.add(
-                "SEARCHING", self.searching_state(), transitions=all_states
+                "TRACKING",
+                wrapper_state(self.tracking_state, all_states),
+                transitions=all_states,
+            )
+            smach.StateMachine.add(
+                "SEARCHING",
+                wrapper_state(self.searching_state, all_states),
+                transitions=all_states,
             )
 
         # Setup Other Variables
@@ -60,6 +81,7 @@ class FollowerStateMachine:
         self.gameController.b_button_callback = self.set_should_stop
         self.gameController.a_button_callback = self.set_should_track
         self.gameController.y_button_callback = self.set_should_search
+        self.gameController.update_callbacks()
 
         self.target_location = Vector()
 
@@ -72,12 +94,12 @@ class FollowerStateMachine:
         self.rate.sleep()
         return self.next_state
 
-    def following_state(self, user_data):
+    def following_state(self):
         """Follow another robot"""
         self.rate.sleep()
         return self.next_state
 
-    def tracking_state(self, user_data):
+    def tracking_state(self):
         """Spin the robot so that it is allways looking at another robot."""
         output_twist = Twist()
         if self.target_location.angle > 0:
@@ -88,7 +110,7 @@ class FollowerStateMachine:
         self.rate.sleep()
         return self.next_state
 
-    def searching_state(self, user_data):
+    def searching_state(self):
         """Quick try to find the other robot!"""
         self.rate.sleep()
         return self.next_state
@@ -97,25 +119,25 @@ class FollowerStateMachine:
         """Recive a message from the object detection node."""
         self.target_location = vector_messge
 
-    def set_should_stop():
-        rospy.loginfo("Should Stop.")
-        self.should_stop = True
-        self.should_follow = self.should_search = self.should_track = False
+    def set_should_stop(self, *args, **kwargs):
+        if kwargs["value"]:
+            self.should_stop = True
+            self.should_follow = self.should_search = self.should_track = False
 
-    def set_should_follow():
-        rospy.loginfo("Should Follow.")
-        self.should_follow = True
-        self.should_stop = self.should_search = self.should_track = False
+    def set_should_follow(self, *args, **kwargs):
+        if kwargs["value"]:
+            self.should_follow = True
+            self.should_stop = self.should_search = self.should_track = False
 
-    def set_should_search():
-        rospy.loginfo("Should Search.")
-        self.should_search = True
-        self.should_stop = self.should_follow = self.should_track = False
+    def set_should_search(self, *args, **kwargs):
+        if kwargs["value"]:
+            self.should_search = True
+            self.should_stop = self.should_follow = self.should_track = False
 
-    def set_should_track():
-        rospy.loginfo("Should Track.")
-        self.should_track = True
-        self.should_stop = self.should_follow = self.should_search = False
+    def set_should_track(self, *args, **kwargs):
+        if kwargs["value"]:
+            self.should_track = True
+            self.should_stop = self.should_follow = self.should_search = False
 
     @property
     def next_state(self):
@@ -134,4 +156,8 @@ class FollowerStateMachine:
 
 
 if __name__ == "__main__":
+    rospy.init_node("follower_state_machine")
     follower_sm = FollowerStateMachine()
+    follower_sm.startup()
+
+    rospy.spin()

@@ -31,6 +31,9 @@ class GameController(object):
     def update_callbacks(self):
         """Call this to re-assign callback functions after they have been changed."""
         raise NotImplementedError
+    
+    def null_callback(self, value):
+        """Don't do anything."""
 
 
 class LogitechGameController(GameController):
@@ -54,16 +57,15 @@ class LogitechGameController(GameController):
         """Call this to re-assign callback functions after they have been changed."""
 
         self.button_callback_map = [
-            self.x_button_callback,
             self.a_button_callback,
             self.b_button_callback,
+            self.x_button_callback,
             self.y_button_callback,
-            self.lb_button_callback,
-            self.rb_button_callback,
             self.lt_button_callback,
             self.rt_button_callback,
-            self.start_button_callback,
             self.back_button_callback,
+            self.start_button_callback,
+            self.null_callback,
             self.left_stick_button_callback,
             self.right_stick_button_callback,
         ]
@@ -71,8 +73,10 @@ class LogitechGameController(GameController):
         self.axis_callback_map = [
             self.left_stick_horizontal_callback,
             self.left_stick_vertical_callback,
+            self.lb_button_callback,
             self.right_stick_horizontal_callback,
-            self.left_stick_vertical_callback,
+            self.right_stick_vertical_callback,
+            self.rb_button_callback,
             self.cross_pad_horizontal_callback,
             self.cross_pad_vertical_callback,
         ]
@@ -92,14 +96,6 @@ class LogitechGameController(GameController):
     def y_button_callback(self, value):
         """What happens when the y button is pressed"""
         rospy.loginfo("y Button Callback (Not re-mapped).")
-
-    def lb_button_callback(self, value):
-        """What happens when the lb button is pressed"""
-        rospy.loginfo("lb Button Callback (Not re-mapped).")
-
-    def rb_button_callback(self, value):
-        """What happens when the rb button is pressed"""
-        rospy.loginfo("rb Button Callback (Not re-mapped).")
 
     def lt_button_callback(self, value):
         """What happens when the lt button is pressed"""
@@ -140,6 +136,14 @@ class LogitechGameController(GameController):
     def right_stick_vertical_callback(self, value):
         """Process the updated value of the horizontal axis on the left stick."""
         rospy.loginfo("Right Stick Vertical Callback (Not re-mapped).")
+
+    def lb_button_callback(self, value):
+        """What happens when the lb button is pressed"""
+        rospy.loginfo("lb Button Callback (Not re-mapped).")
+
+    def rb_button_callback(self, value):
+        """What happens when the rb button is pressed"""
+        rospy.loginfo("rb Button Callback (Not re-mapped).")
 
     def cross_pad_horizontal_callback(self, value):
         """Process the updated value of the horizontal axis on the left stick."""

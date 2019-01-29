@@ -43,6 +43,8 @@ class FollowerStateMachine(object):
         self.should_track = False
         self.should_follow = False
         self.should_search = False
+        self.should_exit = False
+        self._next_state = "stop"
 
         # Setup State Machine
         self.state_machine = smach.StateMachine(outcomes=["EXIT"])
@@ -81,6 +83,7 @@ class FollowerStateMachine(object):
         self.gameController.b_button_callback = self.set_should_stop
         self.gameController.a_button_callback = self.set_should_track
         self.gameController.y_button_callback = self.set_should_search
+        self.gameController.start_button_callback = self.set_should_exit
         self.gameController.update_callbacks()
 
         self.target_location = Vector()
@@ -120,39 +123,36 @@ class FollowerStateMachine(object):
         self.target_location = vector_messge
 
     def set_should_stop(self, *args, **kwargs):
-        if kwargs["value"]:
-            self.should_stop = True
-            self.should_follow = self.should_search = self.should_track = False
+        self.should_stop = bool(kwargs["value"])
 
     def set_should_follow(self, *args, **kwargs):
-        if kwargs["value"]:
-            self.should_follow = True
-            self.should_stop = self.should_search = self.should_track = False
+        self.should_follow = bool(kwargs["value"])
 
     def set_should_search(self, *args, **kwargs):
-        if kwargs["value"]:
-            self.should_search = True
-            self.should_stop = self.should_follow = self.should_track = False
+        self.should_search = bool(kwargs["value"])
 
     def set_should_track(self, *args, **kwargs):
-        if kwargs["value"]:
-            self.should_track = True
-            self.should_stop = self.should_follow = self.should_search = False
+        self.should_track = bool(kwargs["value"])
+    
+    def set_should_exit(self, *args, **kwargs):
+        self.should_exit = bool(kwargs["value"])
 
     @property
     def next_state(self):
         """Choose which state should be transitioned to."""
         if self.should_stop:
-            return "stop"
+            self._next_state = "stop"
         elif self.should_follow:
-            return "follow"
+            self._next_state = "follow"
         elif self.should_track:
-            return "track"
+            self._next_state = "track"
         elif self.should_search:
-            return "search"
+            self._next_state = "search"
+        elif self.should_exit:
+            self._next_state = "exit"
 
-        rospy.logerr("Could not determine next state. Exiting.")
-        return "exit"
+        return self._next_state
+
 
 
 if __name__ == "__main__":

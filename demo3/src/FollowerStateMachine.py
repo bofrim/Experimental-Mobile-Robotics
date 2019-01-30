@@ -10,6 +10,7 @@ from geometry_msgs.msg import Twist
 # This Package Python
 from demo3.msg import Vector
 from GameController import LogitechGameController
+from VelocityCalculator import SimpleVelocityCalculator, RampedVelocityCalculator
 
 # Constants
 FOLLOWER_FREQ_HZ = 10
@@ -86,6 +87,9 @@ class FollowerStateMachine(object):
         self.gameController.start_button_callback = self.set_should_exit
         self.gameController.update_callbacks()
 
+        self.velocity_calculator = SimpleVelocityCalculator(
+            linear_scale=0.5, angular_scale=0.7, target_distance_m=1.0, target_angle_deg=0
+        )
         self.target_location = Vector()
 
     def startup(self):
@@ -99,16 +103,23 @@ class FollowerStateMachine(object):
 
     def following_state(self):
         """Follow another robot"""
+        output_twist = Twist()
+        output_twist.angular = self.velocity_calculator.calculate_angular(
+            self.target_location.angle
+        )
+        output_twist.linear = self.velocity_calculator.calculate_linear(
+            self.target_location.magnitude
+        )
+        self.cmd_vel_publisher.publish(output_twist)
         self.rate.sleep()
         return self.next_state
 
     def tracking_state(self):
         """Spin the robot so that it is allways looking at another robot."""
         output_twist = Twist()
-        if self.target_location.angle > 0:
-            output_twist.angular.z = 1
-        else:
-            output_twist.angular.z = -1
+        output_twist.angular = self.velocity_calculator.calculate_angular(
+            self.target_location.angle
+        )
         self.cmd_vel_publisher.publish(output_twist)
         self.rate.sleep()
         return self.next_state
@@ -121,6 +132,7 @@ class FollowerStateMachine(object):
     def update_target(self, vector_messge):
         """Recive a message from the object detection node."""
         self.target_location = vector_messge
+        print("Updating target: ", self.target_location)
 
     def set_should_stop(self, *args, **kwargs):
         self.should_stop = bool(kwargs["value"])
@@ -133,7 +145,7 @@ class FollowerStateMachine(object):
 
     def set_should_track(self, *args, **kwargs):
         self.should_track = bool(kwargs["value"])
-    
+
     def set_should_exit(self, *args, **kwargs):
         self.should_exit = bool(kwargs["value"])
 
@@ -152,7 +164,6 @@ class FollowerStateMachine(object):
             self._next_state = "exit"
 
         return self._next_state
-
 
 
 if __name__ == "__main__":

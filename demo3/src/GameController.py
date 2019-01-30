@@ -31,7 +31,7 @@ class GameController(object):
     def update_callbacks(self):
         """Call this to re-assign callback functions after they have been changed."""
         raise NotImplementedError
-    
+
     def null_callback(self, value):
         """Don't do anything."""
 

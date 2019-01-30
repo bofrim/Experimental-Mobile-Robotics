@@ -14,9 +14,11 @@ SCAN_BOUNDARY_DELTA_DEG = 10
 DISTANCE_LIMIT = 1000
 
 
-class object_detector():
+class object_detector:
     def __init__(self):
-        self.laser_scan_sub = rospy.Subscriber("/scan", LaserScan, self.laser_scan_callback)
+        self.laser_scan_sub = rospy.Subscriber(
+            "/scan", LaserScan, self.laser_scan_callback
+        )
         self.distance_pub = rospy.Publisher("/focusedObject", Vector, queue_size=1)
         self.scan_min_angle = None
         self.scan_max_angle = None
@@ -26,18 +28,30 @@ class object_detector():
         self.object_angle = 0.0
 
     def laser_scan_callback(self, msg):
-        if self.scan_min_angle is None or self.scan_max_angle is None or self.scan_angle_increment is None:
+        if (
+            self.scan_min_angle is None
+            or self.scan_max_angle is None
+            or self.scan_angle_increment is None
+        ):
             self.scan_min_angle = math.degrees(msg.angle_min)
             self.scan_max_angle = math.degrees(msg.angle_max)
             self.scan_angle_increment = math.degrees(msg.angle_increment)
 
-        scan_left_boundary = max(self.scan_min_angle, self.object_angle - SCAN_BOUNDARY_DELTA_DEG)
-        scan_right_boundary = min(self.scan_max_angle, self.object_angle + SCAN_BOUNDARY_DELTA_DEG)
+        scan_left_boundary = max(
+            self.scan_min_angle, self.object_angle - SCAN_BOUNDARY_DELTA_DEG
+        )
+        scan_right_boundary = min(
+            self.scan_max_angle, self.object_angle + SCAN_BOUNDARY_DELTA_DEG
+        )
 
-        angle, distance = self.closest_object_in_range(msg.ranges, scan_left_boundary, scan_right_boundary)
+        angle, distance = self.closest_object_in_range(
+            msg.ranges, scan_left_boundary, scan_right_boundary
+        )
         if distance >= DISTANCE_LIMIT:
-            angle, distance = self.closest_object_in_range(msg.ranges, self.scan_min_angle, self.scan_max_angle)
- 
+            angle, distance = self.closest_object_in_range(
+                msg.ranges, self.scan_min_angle, self.scan_max_angle
+            )
+
         self.object_distance = distance
         self.object_angle = angle
 
@@ -50,8 +64,9 @@ class object_detector():
 
         self.distance_pub.publish(distance_msg)
 
-            
-    def closest_object_in_range(self, range_data, left_boundary_angle, right_boundary_angle):
+    def closest_object_in_range(
+        self, range_data, left_boundary_angle, right_boundary_angle
+    ):
         left_boundary_index = self.angle_to_range_index(left_boundary_angle)
         right_boundary_index = self.angle_to_range_index(right_boundary_angle)
 
@@ -67,15 +82,16 @@ class object_detector():
         angle = self.range_index_to_angle(angle_index)
         return (angle, distance)
 
-
     def angle_to_range_index(self, angle):
-        return int(math.floor((angle - self.scan_min_angle)/self.scan_angle_increment))
+        return int(
+            math.floor((angle - self.scan_min_angle) / self.scan_angle_increment)
+        )
 
     def range_index_to_angle(self, index):
         return math.floor((index * self.scan_angle_increment) + self.scan_min_angle)
 
 
 if __name__ == "__main__":
-    rospy.init_node('object_detector')
+    rospy.init_node("object_detector")
     detector_node = object_detector()
     rospy.spin()

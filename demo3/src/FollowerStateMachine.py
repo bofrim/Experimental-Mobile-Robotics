@@ -88,7 +88,10 @@ class FollowerStateMachine(object):
         self.gameController.update_callbacks()
 
         self.velocity_calculator = SimpleVelocityCalculator(
-            linear_scale=0.5, angular_scale=0.7, target_distance_m=1.0, target_angle_deg=0
+            linear_scale=0.5,
+            angular_scale=0.7,
+            target_distance_m=1.0,
+            target_angle_deg=0,
         )
         self.target_location = Vector()
 
@@ -171,4 +174,5 @@ if __name__ == "__main__":
     follower_sm = FollowerStateMachine()
     follower_sm.startup()
 
-    rospy.spin()
+    while not rospy.is_shutdown():
+        """Spin"""

@@ -57,15 +57,16 @@ class LogitechGameController(GameController):
         """Call this to re-assign callback functions after they have been changed."""
 
         self.button_callback_map = [
+            self.x_button_callback,
             self.a_button_callback,
             self.b_button_callback,
-            self.x_button_callback,
             self.y_button_callback,
+            self.lb_button_callback,
+            self.rb_button_callback,
             self.lt_button_callback,
             self.rt_button_callback,
-            self.back_button_callback,
             self.start_button_callback,
-            self.null_callback,
+            self.back_button_callback,
             self.left_stick_button_callback,
             self.right_stick_button_callback,
         ]
@@ -73,13 +74,36 @@ class LogitechGameController(GameController):
         self.axis_callback_map = [
             self.left_stick_horizontal_callback,
             self.left_stick_vertical_callback,
-            self.lb_button_callback,
             self.right_stick_horizontal_callback,
-            self.right_stick_vertical_callback,
-            self.rb_button_callback,
+            self.left_stick_vertical_callback,
             self.cross_pad_horizontal_callback,
             self.cross_pad_vertical_callback,
         ]
+
+        # self.button_callback_map = [
+        #    self.a_button_callback,
+        #    self.b_button_callback,
+        #    self.x_button_callback,
+        #    self.y_button_callback,
+        #    self.lt_button_callback,
+        #    self.rt_button_callback,
+        #    self.back_button_callback,
+        #    self.start_button_callback,
+        #    self.null_callback,
+        #    self.left_stick_button_callback,
+        #    self.right_stick_button_callback,
+        # ]
+
+        # self.axis_callback_map = [
+        #    self.left_stick_horizontal_callback,
+        #    self.left_stick_vertical_callback,
+        #    self.lb_button_callback,
+        #    self.right_stick_horizontal_callback,
+        #    self.right_stick_vertical_callback,
+        #    self.rb_button_callback,
+        #    self.cross_pad_horizontal_callback,
+        #    self.cross_pad_vertical_callback,
+        # ]
 
     def x_button_callback(self, value):
         """What happens when the x button is pressed"""

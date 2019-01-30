@@ -1,0 +1,6 @@
+<launch>
+    <node name="object_detector" pkg="demo3" type="ObjectDetector.py" respawn="false" />
+    <node name="follower_state_machine" pkg="demo3" type="FollowerStateMachine.py" respawn="false">
+        <remap from="cmd_vel" to="cmd_vel_mux/input/teleop"/>
+    </node>
+</launch>

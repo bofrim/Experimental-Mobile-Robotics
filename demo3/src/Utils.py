@@ -10,7 +10,6 @@ def closest_object_in_range(range_data, left_boundary_angle, right_boundary_angl
     angle_index = (left_boundary_index + right_boundary_index) / 2
 
     for i in range(left_boundary_index, right_boundary_index):
-
         current_distance = range_data[i]
         if current_distance < distance:
             distance = current_distance

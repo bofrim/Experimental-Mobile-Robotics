@@ -1,6 +1,12 @@
 <launch>
     <remap from="smooth_vel_out" to="cmd_vel_mux/input/teleop"/>
+    <!-- Avoidance has bugs
+    <remap from="smooth_vel_out" to="avoid_vel_in"/>
+    <remap from="avoid_vel_out" to="cmd_vel_mux/input/teleop"/>
+    <node name="avoidance" pkg = "demo3" type="Avoider.py" respawn="true"/>
+    -->
     <node name="my_velocity_smoother" pkg="demo3" type="VelocitySmoother.py"/>
+    <node name="zone_detector" pkg="demo3" type="ZoneDetector.py" respawn="true" />
     <node name="object_detector" pkg="demo3" type="ObjectDetector.py" respawn="true" />
     <node name="follower_state_machine" pkg="demo3" type="FollowerStateMachine.py" respawn="true">
         <remap from="cmd_vel" to="smooth_vel_in"/>

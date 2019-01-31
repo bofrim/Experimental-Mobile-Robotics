@@ -7,21 +7,23 @@ import math
 from geometry_msgs.msg import Twist
 from kobuki_msgs.msg import BumperEvent
 from demo3.msg import ZoneScan
-
-DISTANCE_LIMIT = 3.0
-FAR_RIGHT = 0
-RIGHT = 1
-CLOSE_RIGHT = 2
-CLOSE_LEFT = 3
-LEFT = 4
-FAR_LEFT = 5
+from Constants import (
+    DISTANCE_LIMIT,
+    RIGHT,
+    OUTER_RIGHT,
+    INNER_RIGHT,
+    LEFT,
+    OUTER_LEFT,
+    INNER_LEFT,
+    ZONE_NUM,
+)
 
 class Robber():
     def __init__(self):
         rospy.init_node("robber")
         self.rate = rospy.Rate(10)
         self.bumped = False
-        self.zone_distances = [3.0, 3.0, 3.0, 3.0, 3.0, 3.0]
+        self.zone_distances = [DISTANCE_LIMIT] * ZONE_NUM
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=1)
         self.zone_sub = rospy.Subscriber("zone_scan", ZoneScan, self.zone_callback)
         self.bumper_sub = rospy.Subscriber("/mobile_base/events/bumper", BumperEvent, self.bumper_callback)

@@ -18,7 +18,7 @@ def cap_mag(value, cap):
 
 class Smoother(object):
     def __init__(
-        self, max_lin_accel=0.06, max_ang_accel=0.5, max_lin_vel=3.0, max_ang_vel=5.4
+        self, max_lin_accel=0.08, max_ang_accel=0.3, max_lin_vel=2.7, max_ang_vel=5.4
     ):
         self.max_lin_accel = max_lin_accel
         self.max_ang_accel = max_ang_accel

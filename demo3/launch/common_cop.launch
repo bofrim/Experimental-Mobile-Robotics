@@ -1,8 +1,8 @@
 <launch>
     <remap from="smooth_vel_out" to="cmd_vel_mux/input/teleop"/>
     <node name="my_velocity_smoother" pkg="demo3" type="VelocitySmoother.py"/>
-    <node name="object_detector" pkg="demo3" type="ObjectDetector.py" respawn="false" />
-    <node name="follower_state_machine" pkg="demo3" type="FollowerStateMachine.py" respawn="false">
+    <node name="object_detector" pkg="demo3" type="ObjectDetector.py" respawn="true" />
+    <node name="follower_state_machine" pkg="demo3" type="FollowerStateMachine.py" respawn="true">
         <remap from="cmd_vel" to="smooth_vel_in"/>
     </node>
     <!-- Using my own velocity smoother

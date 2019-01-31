@@ -2,6 +2,7 @@
 import rospy
 import smach
 import smach_ros
+from time import time
 
 import math
 from geometry_msgs.msg import Twist
@@ -17,7 +18,7 @@ LEFT = 4
 OUTER_LEFT = 5
 
 INNER_DISTANCE_LIMIT = 1.5
-NORMAL_DISTANCE_LIMIT = 1.2
+NORMAL_DISTANCE_LIMIT = 1.3
 OUTER_DISTANCE_LIMIT = 1.0
 
 global g_zone_distances
@@ -52,6 +53,12 @@ def is_straight_ahead_blocked(zones):
 
 def is_straight_ahead_clear(zones):
         return (zones[INNER_LEFT] >= INNER_DISTANCE_LIMIT and
+            zones[LEFT] >= NORMAL_DISTANCE_LIMIT and
+            zones[INNER_RIGHT] >= INNER_DISTANCE_LIMIT and
+            zones[RIGHT] >= NORMAL_DISTANCE_LIMIT)
+
+def is_straight_ahead_clear_nimble(zones):
+        return (zones[INNER_LEFT] >= INNER_DISTANCE_LIMIT and
             zones[INNER_RIGHT] >= INNER_DISTANCE_LIMIT)
 
 
@@ -60,10 +67,10 @@ def calculate_veer_angular_velocity(inner_distance, normal_distance, outer_dista
         angular_vel = 0.5
 
     elif normal_distance < NORMAL_DISTANCE_LIMIT:
-        angular_vel = 0.3
+        angular_vel = 0.2
 
     elif outer_distance < OUTER_DISTANCE_LIMIT:
-        angular_vel = 0.2
+        angular_vel = 0.1
 
     return angular_vel
 
@@ -84,6 +91,7 @@ class Straight(smach.State):
                 return 'bump'
 
             elif is_straight_ahead_blocked(current_zones):
+                self.vel_pub.publish(Twist())
                 return 'stuck'
 
             elif not is_left_clear(current_zones):
@@ -93,7 +101,7 @@ class Straight(smach.State):
                 return 'veer_left'
 
             twist = Twist()
-            twist.linear.x = 1.0
+            twist.linear.x = 0.8
             self.vel_pub.publish(twist)
             self.rate.sleep()
 
@@ -120,11 +128,12 @@ class VeerLeft(smach.State):
                 return 'straight'
 
             elif not is_left_clear(current_zones):
+                self.vel_pub.publish(Twist())
                 return 'stuck'
 
             twist = Twist()
             twist.angular.z = calculate_veer_angular_velocity(current_zones[INNER_RIGHT], current_zones[RIGHT], current_zones[OUTER_RIGHT]) * self.direction
-            twist.linear.x = 0.6 - abs(twist.angular.z)
+            twist.linear.x = 0.5 - abs(twist.angular.z)
             self.vel_pub.publish(twist)
             self.rate.sleep()
 
@@ -151,11 +160,12 @@ class VeerRight(smach.State):
                 return 'straight'
 
             elif not is_right_clear(current_zones):
+                self.vel_pub.publish(Twist())
                 return 'stuck'
 
             twist = Twist()
             twist.angular.z = calculate_veer_angular_velocity(current_zones[INNER_LEFT], current_zones[LEFT], current_zones[OUTER_LEFT]) * self.direction
-            twist.linear.x = 0.6 - abs(twist.angular.z)
+            twist.linear.x = 0.5 - abs(twist.angular.z)
             self.vel_pub.publish(twist)
             self.rate.sleep()
 
@@ -197,16 +207,22 @@ class Stuck(smach.State):
         self.vel_pub.publish(Twist())
 
         direction = (g_zone_distances[INNER_LEFT] - g_zone_distances[INNER_RIGHT]) / abs(g_zone_distances[INNER_LEFT] - g_zone_distances[INNER_RIGHT])
-
+        
+        starting_time = time()
+        time_limit = 1
         while not rospy.is_shutdown():
             current_zones = g_zone_distances
 
-            # This might just mean that ONE of the front paths is free
-            if is_straight_ahead_clear(current_zones):
-                return 'straight'
+            if time() - starting_time > time_limit:
+                if is_straight_ahead_clear_nimble(current_zones):
+                    return 'straight'
+
+            else: 
+                if is_straight_ahead_clear(current_zones):
+                    return 'straight'
 
             twist = Twist()
-            twist.angular.z = 0.4 * direction
+            twist.angular.z = 0.6 * direction
             self.vel_pub.publish(twist)
             self.rate.sleep()
 

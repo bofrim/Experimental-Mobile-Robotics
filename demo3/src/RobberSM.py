@@ -234,9 +234,11 @@ class Stuck(smach.State):
 
         self.vel_pub.publish(Twist())
 
-        direction = (
-            g_zone_distances[INNER_LEFT] - g_zone_distances[INNER_RIGHT]
-        ) / abs(g_zone_distances[INNER_LEFT] - g_zone_distances[INNER_RIGHT])
+        difference = g_zone_distances[INNER_LEFT] - g_zone_distances[INNER_RIGHT]
+        if difference == 0.0:
+            direction = 1
+        else:
+            direction = difference / abs(difference)
 
         starting_time = time()
         time_limit = 1

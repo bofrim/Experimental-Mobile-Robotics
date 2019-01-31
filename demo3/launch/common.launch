@@ -1,10 +1,13 @@
 <launch>
-    <remap from="smooth_cmd_vel" to="cmd_vel_mux/input/teleop"/>
+    <remap from="smooth_vel_out" to="cmd_vel_mux/input/teleop"/>
+    <node name="my_velocity_smoother" pkg="demo3" type="VelocitySmoother.py"/>
     <node name="object_detector" pkg="demo3" type="ObjectDetector.py" respawn="false" />
     <node name="follower_state_machine" pkg="demo3" type="FollowerStateMachine.py" respawn="false">
-        <remap from="cmd_vel" to="raw_cmd_vel"/>
+        <remap from="cmd_vel" to="smooth_vel_in"/>
     </node>
+    <!-- Using my own velocity smoother
     <node name="standalond_vel_smoother" pkg="yocs_velocity_smoother" type="FollowerStateMachine.py" respawn="false">
     </node>
+    -->
     <include file="$(find yocs_velocity_smoother)/launch/standalone.launch"/>
 </launch>

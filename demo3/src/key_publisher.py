@@ -1,4 +1,4 @@
-#!/home/bofrim/.virtualenvs/teleop_bot/bin/python
+#!/usr/bin/env python
 import sys
 import select
 import tty
@@ -14,8 +14,11 @@ if __name__ == "__main__":
     old_attr = termios.tcgetattr(sys.stdin)
     tty.setcbreak(sys.stdin.fileno())
     print("Publishing keystrokes. Press Ctrl-C to exit...")
-    while not rospy.is_shutdown():
-        if select.select([sys.stdin], [], [], 0)[0] == [sys.stdin]:
-            key_pub.publish(sys.stdin.read(1))
-        rate.sleep()
-    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_attr)
+    try:
+        while not rospy.is_shutdown():
+            if select.select([sys.stdin], [], [], 0)[0] == [sys.stdin]:
+                key_pub.publish(sys.stdin.read(1))
+            rate.sleep()
+    except rospy.exceptions.ROSException:
+        print("Setting it back to the old std in")
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_attr)

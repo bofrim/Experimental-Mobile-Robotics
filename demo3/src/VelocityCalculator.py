@@ -1,8 +1,10 @@
 # Standard Python
-#from abc import ABC, abstractmethod
+# from abc import ABC, abstractmethod
 
 # ROS Python
+import rospy
 from geometry_msgs.msg import Vector3
+
 
 def cap_mag(value, cap):
     """Return the value with the minimum magnitude."""
@@ -22,11 +24,11 @@ class VelocityCalculator(object):
         self.target_distance_m = float(target_distance_m)
         self.target_angle_deg = float(target_angle_deg)
 
-#    @abstractmethod
+    #    @abstractmethod
     def calculate_angular(self, delta_theta):
         """Calculate an angular velocity to output to the robot base."""
 
-#    @abstractmethod
+    #    @abstractmethod
     def calculate_linear(self, delta_distance):
         """Calculate a linear velocity to output to the robot base."""
 
@@ -38,9 +40,9 @@ class SimpleVelocityCalculator(VelocityCalculator):
         """Naive approach to try to make delta theta target angle."""
         angular = Vector3()
         if delta_theta > self.target_angle_deg:
-            angular.z = self.angular_scale
+            angular.z = self.angular_scale  # * abs(delta_theta)
         else:
-            angular.z = -1 * self.angular_scale
+            angular.z = -1 * self.angular_scale  # * abs(delta_theta)
 
         return angular
 
@@ -56,33 +58,40 @@ class SimpleVelocityCalculator(VelocityCalculator):
 
         return linear
 
-class RampedVelocityCalculator(VelocityCalculator):
-    """A Velocity calculator with ramps."""
 
-    DELTA_ANGLE_RAMP_DEG = 7.0
-    DELTA_LINEAR_RAMP_M = 0.2
+class AttenuatedVelocityCalculator(VelocityCalculator):
+    """Attenuate velocity as the taraget nears."""
 
-
-    def calculate_angular(self, delta_theata):
+    def calculate_angular(self, delta_theta, attenuation_threshold_deg=20):
+        """Naive approach to try to make delta theta target angle."""
         angular = Vector3()
-        angular.z = self.angular_scale * cap_mag((float(delta_theata) - self.target_angle_deg) / RampedVelocityCalculator.DELTA_ANGLE_RAMP_DEG, cap=1)
-        
-        assert abs(angular.z) <= self.angular_scale, "ang z: " + str(angular.z) + " scale:" + str(self.angular_scale)
-        
-        print("Delta theta: ", delta_theata)
-        print(angular)  
+        if delta_theta > self.target_angle_deg:
+            angular.z = self.angular_scale
+        else:
+            angular.z = -1 * self.angular_scale
+
+        is_in_att_range = (
+            abs(self.target_angle_deg - delta_theta) < attenuation_threshold_deg
+        )
+        rospy.loginfo("target_angle_deg: %s", self.target_angle_deg)
+        rospy.loginfo("abs(delta_theta): %s", abs(delta_theta))
+        rospy.loginfo("difference: %s", abs(self.target_angle_deg - delta_theta))
+        rospy.loginfo("attenuation_thresh: %s", attenuation_threshold_deg)
+        rospy.loginfo("Is being attenuated: %s", is_in_att_range)
+        if is_in_att_range:
+            angular.z *= float(abs(self.target_angle_deg - delta_theta)) / float(
+                attenuation_threshold_deg
+            )
+
         return angular
 
-    def calculate_linear(self, delta_distance):
+    def calculate_linear(self, delta_distance, attenuation_threshold_m=0.1):
+        """Naive approach to try and make delta distance equal target distance.
+        
+        Only move forward.
+        """
         linear = Vector3()
         if delta_distance > self.target_distance_m:
-            linear.x = self.linear_scale * min(1, float(abs(delta_distance - self.target_distance_m))/RampedVelocityCalculator.DELTA_LINEAR_RAMP_M)
-        
-        else:
-            #linear.x = -1 * self.linear_scale * min(1, float(abs(delta_distance - self.target_distance_m))/RampedVelocityCalculator.DELTA_LINEAR_RAMP_M)
-            linear.x = 0
-        
-        assert abs(linear.x) < self.linear_scale
-        print("Delat disgtance: ", delta_distance)
-        print(linear)
+            linear.x = self.linear_scale
+
         return linear

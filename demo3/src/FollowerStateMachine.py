@@ -10,7 +10,7 @@ from geometry_msgs.msg import Twist
 # This Package Python
 from demo3.msg import Vector
 from GameController import LogitechGameController
-from VelocityCalculator import SimpleVelocityCalculator, RampedVelocityCalculator
+from VelocityCalculator import SimpleVelocityCalculator, AttenuatedVelocityCalculator
 
 # Constants
 FOLLOWER_FREQ_HZ = 10
@@ -87,10 +87,10 @@ class FollowerStateMachine(object):
         self.gameController.start_button_callback = self.set_should_exit
         self.gameController.update_callbacks()
 
-        self.velocity_calculator = SimpleVelocityCalculator(
-            linear_scale=0.5,
-            angular_scale=0.7,
-            target_distance_m=1.0,
+        self.velocity_calculator = AttenuatedVelocityCalculator(
+            linear_scale=0.50,
+            angular_scale=1.5,
+            target_distance_m=0.8,
             target_angle_deg=0,
         )
         self.target_location = Vector()
@@ -100,8 +100,9 @@ class FollowerStateMachine(object):
         self.state_machine.execute()
 
     def idle_state(self):
-        """Do nothing."""
+        """Don't move."""
         self.rate.sleep()
+        self.cmd_vel_publisher.publish(Twist())
         return self.next_state
 
     def following_state(self):
@@ -113,6 +114,7 @@ class FollowerStateMachine(object):
         output_twist.linear = self.velocity_calculator.calculate_linear(
             self.target_location.magnitude
         )
+        rospy.loginfo("The published twist from FSM is %s", str(output_twist))
         self.cmd_vel_publisher.publish(output_twist)
         self.rate.sleep()
         return self.next_state
@@ -174,5 +176,3 @@ if __name__ == "__main__":
     follower_sm = FollowerStateMachine()
     follower_sm.startup()
 
-    while not rospy.is_shutdown():
-        """Spin"""

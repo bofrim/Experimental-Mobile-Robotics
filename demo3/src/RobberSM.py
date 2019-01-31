@@ -8,18 +8,25 @@ import math
 from geometry_msgs.msg import Twist
 from kobuki_msgs.msg import BumperEvent
 from demo3.msg import ZoneScan
-
-DISTANCE_LIMIT = 3.0
-OUTER_RIGHT = 0
-RIGHT = 1
-INNER_RIGHT = 2
-INNER_LEFT = 3
-LEFT = 4
-OUTER_LEFT = 5
-
-INNER_DISTANCE_LIMIT = 1.5
-NORMAL_DISTANCE_LIMIT = 1.3
-OUTER_DISTANCE_LIMIT = 1.0
+from ZoneDetector import (
+    is_right_clear,
+    is_left_clear,
+    is_straight_ahead_blocked,
+    is_straight_ahead_clear,
+    is_straight_ahead_clear_nimble,
+)
+from Constants import (
+    DISTANCE_LIMIT,
+    OUTER_DISTANCE_LIMIT,
+    NORMAL_DISTANCE_LIMIT,
+    INNER_DISTANCE_LIMIT,
+    RIGHT,
+    OUTER_RIGHT,
+    INNER_RIGHT,
+    LEFT,
+    OUTER_LEFT,
+    INNER_LEFT,
+)
 
 global g_zone_distances
 global g_bumped
@@ -33,45 +40,6 @@ def zone_callback(msg):
 def bumper_callback(msg):
     global g_bumped
     g_bumped = bool(msg.state)
-
-
-def is_right_clear(zones):
-    return (
-        zones[OUTER_RIGHT] >= OUTER_DISTANCE_LIMIT
-        and zones[RIGHT] >= NORMAL_DISTANCE_LIMIT
-        and zones[INNER_RIGHT] >= INNER_DISTANCE_LIMIT
-    )
-
-
-def is_left_clear(zones):
-    return (
-        zones[OUTER_LEFT] >= OUTER_DISTANCE_LIMIT
-        and zones[LEFT] >= NORMAL_DISTANCE_LIMIT
-        and zones[INNER_LEFT] >= INNER_DISTANCE_LIMIT
-    )
-
-
-def is_straight_ahead_blocked(zones):
-    return (
-        zones[INNER_LEFT] < INNER_DISTANCE_LIMIT
-        and zones[INNER_RIGHT] < INNER_DISTANCE_LIMIT
-    )
-
-
-def is_straight_ahead_clear(zones):
-    return (
-        zones[INNER_LEFT] >= INNER_DISTANCE_LIMIT
-        and zones[LEFT] >= NORMAL_DISTANCE_LIMIT
-        and zones[INNER_RIGHT] >= INNER_DISTANCE_LIMIT
-        and zones[RIGHT] >= NORMAL_DISTANCE_LIMIT
-    )
-
-
-def is_straight_ahead_clear_nimble(zones):
-    return (
-        zones[INNER_LEFT] >= INNER_DISTANCE_LIMIT
-        and zones[INNER_RIGHT] >= INNER_DISTANCE_LIMIT
-    )
 
 
 def calculate_veer_angular_velocity(inner_distance, normal_distance, outer_distance):
@@ -116,6 +84,7 @@ class Straight(smach.State):
 
             twist = Twist()
             twist.linear.x = 0.8
+            rospy.loginfo("test")
             self.vel_pub.publish(twist)
             self.rate.sleep()
 
@@ -234,9 +203,9 @@ class Stuck(smach.State):
 
         self.vel_pub.publish(Twist())
 
-        direction = (
-            g_zone_distances[INNER_LEFT] - g_zone_distances[INNER_RIGHT]
-        ) / abs(g_zone_distances[INNER_LEFT] - g_zone_distances[INNER_RIGHT])
+        direction = 1.0
+        if g_zone_distances[INNER_LEFT] < g_zone_distances[INNER_RIGHT]:
+            direction = -1.0
 
         starting_time = time()
         time_limit = 1

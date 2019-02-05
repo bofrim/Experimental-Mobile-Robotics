@@ -88,9 +88,9 @@ class FollowerStateMachine(object):
         self.gameController.update_callbacks()
 
         self.velocity_calculator = AttenuatedVelocityCalculator(
-            linear_scale=0.50,
+            linear_scale=0.40,
             angular_scale=1.5,
-            target_distance_m=0.8,
+            target_distance_m=1.1,
             target_angle_deg=0,
         )
         self.target_location = Vector()

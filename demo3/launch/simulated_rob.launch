@@ -1,0 +1,11 @@
+<launch>
+    <arg name="world_name" default="$(env TURTLEBOT_GAZEBO_WORLD_FILE)"/>
+    <param name="world_name" value="$(arg world_name)"/>
+    <include file="$(find turtlebot_gazebo)/launch/turtlebot_world.launch"/>
+    <include file="$(find demo3)/launch/common_rob.launch" />
+    <node name="keys_to_joy" pkg="demo3" type="keys_to_joy.py" respawn="true" />
+    <!-- Run key publisher seperatly
+     <node name="key_publisher" pkg="demo3" type="key_publisher.py" respawn="true" />
+     -->
+
+</launch>

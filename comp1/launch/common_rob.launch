@@ -1,8 +1,8 @@
 <launch>
     <remap from="smooth_vel_out" to="cmd_vel_mux/input/teleop"/>
-    <node name="my_velocity_smoother" pkg="demo3" type="VelocitySmoother.py"/>
-    <node name="zone_detector" pkg="demo3" type="ZoneDetector.py" respawn="false" />
-    <node name="robber_state_machine" pkg="demo3" type="RobberSM.py" respawn="true">
+    <node name="my_velocity_smoother" pkg="comp1" type="VelocitySmoother.py"/>
+    <node name="zone_detector" pkg="comp1" type="ZoneDetector.py" respawn="false" />
+    <node name="robber_state_machine" pkg="comp1" type="RobberSM.py" respawn="true">
         <remap from="cmd_vel" to="smooth_vel_in"/>
     </node>
 </launch>

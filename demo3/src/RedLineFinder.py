@@ -7,34 +7,31 @@ import numpy as np
 
 TOP_CROP_FRAC = 0.0
 BOTTOM_CROP_FRAC = 0.0
-MASS_THRESHOLD = 1
+MASS_THRESHOLD = 100000
 BOTTOM_DISTANCE_OFFSET = 0
 HEIGHT = 0.5
-BOTTOM_ANGLE = 10
-TOP_ANGLE = 70
+BOTTOM_DISTANCE = -0.05
+TOP_DISTANCE = 1.0
 
 # Image Procesing Constants
-H_MAX = 48
-H_MIN = 322
+H_MAX = 20
+H_MIN = 317
 S_MAX = 255
-S_MIN = 97
-V_MAX = 250
-V_MIN = 175
+S_MIN = 180
+V_MAX = 255
+V_MIN = 80
 
 
-def interpolate_map(value, orig_min, orig_max, map_min, map_max):
-    print()
-    orig_range = orig_max - orig_min
-    map_range = map_max - map_min
-    range_frac = float(value - orig_min) / float(orig_range)
-    return map_min + (range_frac * map_range)
+def interpolate_map(value, orig_1, orig_2, map_1, map_2):
+    orig_range = orig_2 - orig_1
+    map_range = map_2 - map_1
+    range_frac = float(value - orig_1) / float(orig_range)
+    return map_1 + (range_frac * map_range)
 
 
 def point_to_distance(y_value, y_min, y_max):
-    """Use trig to try to calculate the distance to a point."""
-    angle = interpolate_map(y_value, y_min, y_max, BOTTOM_ANGLE, TOP_ANGLE)
-    print("angle:", angle)
-    return atan(angle) * HEIGHT
+    """This is fundamentally flawed, but it will work for this application."""
+    return interpolate_map(y_value, y_min, y_max, TOP_DISTANCE, BOTTOM_DISTANCE)
 
 
 def threshold_hsv_360(
@@ -76,6 +73,7 @@ class RedLineFinder:
         mask[search_bot:height, 0:width] = 0
 
         moment = cv2.moments(mask)
+        print("mass: ", moment["m00"])
         if moment["m00"] > MASS_THRESHOLD:
             cx = int(moment["m10"] / moment["m00"])
             cy = int(moment["m01"] / moment["m00"])
@@ -84,11 +82,13 @@ class RedLineFinder:
             cv2.circle(mask, (cx, cy), 20, (0, 0, 255), -1)
             print("cy", cy)
 
+            print("distance: ", point_to_distance(float(cy), 0, height))
             self.red_line_pub.publish(Float32(point_to_distance(float(cy), 0, height)))
         else:
             self.red_line_pub.publish(Float32(1000))
 
-        cv2.imshow("window", mask)
+        cv2.imshow("window", image)
+        cv2.imshow("mask", mask)
         cv2.waitKey(3)
 
 

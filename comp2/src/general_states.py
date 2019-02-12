@@ -44,7 +44,7 @@ class Drive(smach.State):
         if M["m00"] > 0:
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
-            # cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
+            cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
             curr_err = cx - w / 2
             delta_err = curr_err - self.prev_err
 

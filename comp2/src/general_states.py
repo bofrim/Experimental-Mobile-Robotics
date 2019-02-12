@@ -15,9 +15,9 @@ class Drive(smach.State):
         self.bridge = cv_bridge.CvBridge()
         self.rate = rate
         self.vel_pub = pub_node
-        #self.stop_sub = rospy.Subscriber(
-        #    "red_line_distance", Float32, self.red_line_callback
-        #)
+        self.stop_sub = rospy.Subscriber(
+            "red_line_distance", Float32, self.red_line_callback
+        )
         self.image_sub = rospy.Subscriber(
             "camera/rgb/image_raw", Image, self.image_callback
         )

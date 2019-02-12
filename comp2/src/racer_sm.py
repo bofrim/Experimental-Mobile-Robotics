@@ -4,9 +4,9 @@ import rospy
 import smach
 import smach_ros
 
-from location1_state import Location1
-from location2_state import Location2
-from location3_state import Location3
+from location1 import Location1
+from location2 import Location2
+from location3 import Location3
 
 from general_states import Driver, LineAdvancer, LineStop
 from geometry_msgs.msg import Twist

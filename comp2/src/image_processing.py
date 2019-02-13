@@ -33,7 +33,7 @@ WHITE_UPPER = [255, 10, 255]
 WHITE_LOWER = [0, 0, 170]
 
 
-def threshold_hsv_360(hsv, h_max, h_min, s_max, s_min, v_max, v_min, denoise=0):
+def threshold_hsv_360(hsv, h_max, h_min, s_max, s_min, v_max, v_min, denoise=0, fill=0):
     """Taken from:
     
     https://eclass.srv.ualberta.ca/pluginfile.php/4909552/mod_folder/content/0/Lab5/CMPUT%20412%20Lab%205.pdf?forcedownload=1
@@ -48,10 +48,13 @@ def threshold_hsv_360(hsv, h_max, h_min, s_max, s_min, v_max, v_min, denoise=0):
     if denoise > 0:
         kernel = np.ones((denoise, denoise), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    if fill > 0:
+        kernel = np.ones((fill, fill), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     return mask
 
 
-def hsv_bound(image, upper_bound, lower_bound, denoise=0):
+def hsv_bound(image, upper_bound, lower_bound, denoise=0, fill=0):
     """Create a mask exposing only regions fall within bounds.
     
     Basically just a wrapper for threshold_hsv_360.
@@ -65,6 +68,7 @@ def hsv_bound(image, upper_bound, lower_bound, denoise=0):
         upper_bound[2],
         lower_bound[2],
         denoise=denoise,
+        fill=fill,
     )
 
 
@@ -122,7 +126,11 @@ def detect_shape(mask, canvas=None):
 
 def detect_green_shape(hsv_image):
     mask = hsv_bound(hsv_image, GREEN_UPPER, GREEN_LOWER, denoise=5)
-    return detect_shape(mask)
+    shapes = detect_shape(mask)
+    if len(shapes) == 1:
+        return shapes[0]
+
+    return Shapes.unknown
 
 
 def path_angle_center(mask, upper_crop=0.5, lower_crop=0.95):
@@ -151,49 +159,32 @@ def path_mass_center(mask, top_frac=0.7, window_frac=0.05, mass_threshold=1000):
     Return the +/- distance between the centroid and the middle of the screen.
     Return None if there is no centroid.
     """
-    mask = crop(mask, upper_crop, top_frac + window_frac)
+    mask = crop(mask, top_frac, top_frac + window_frac)
     M = cv2.moments(mask)
     if M["m00"] > mass_threshold:
         cx = int(M["m10"] / M["m00"])
         cy = int(M["m01"] / M["m00"])
-        cv2.circle(image, (cx, cy), 20, (0, 0, 255), -1)
+        cv2.circle(mask, (cx, cy), 20, (0, 0, 255), -1)
         return cx - w / 2
 
     return None
 
 
-def cross_line(path_mask, line_mask):
-    """Detect a line crossing the path."""
-    combined_mask = path_mask | line_mask
-    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-    lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
-    for rho, theta in lines[0]:
-        a = np.cos(theta)
-        b = np.sin(theta)
-        x0 = a * rho
-        y0 = b * rho
-        x1 = int(x0 + 1000 * (-b))
-        y1 = int(y0 + 1000 * (a))
-        x2 = int(x0 - 1000 * (-b))
-        y2 = int(y0 - 1000 * (a))
-
-        cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
-
-
-def t_intersection(mask):
-    """Detect if there is a T itersection."""
-
-
-def partial_line_cross(path_mask, line_mask):
-    """Detect if a line fully crosses a path."""
-
-
-def aligned_with_path(path_mask):
-    """Check if we are alined with a path."""
-
-
-def aligned_path_angle(Path_mask):
-    """Find the angle of a path that is most aligned with the robot."""
+def lowest_object_coord(mask, threshold=100):
+    """Find the coordinates of the lowes object in the mask.
+    
+    Note: The lowest object corresponds to the largest y coord
+    """
+    _, contours, _ = cv2.findContours(mask, 1, 2)
+    moments = [cv2.moments(c) for c in contours if cv2.moments(c)["m00"] > threshold]
+    lowest_y = -1
+    lowest_coord = (0, lowest_y)
+    for m in moments:
+        x, y = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])
+        if y > lowest_y:
+            lowest_y = y
+            lowest_coord = (x, y)
+    return lowest_coord
 
 
 def bin_filter(image):
@@ -246,41 +237,46 @@ def image_callback(msg):
     bridge = cv_bridge.CvBridge()
     image = bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    # Lines
-    white_mask = hsv_bound(hsv, WHITE_UPPER, WHITE_LOWER)
-    kernel = np.ones((2, 2), np.uint8)
-    white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_OPEN, kernel)
-    path_mask = bin_filter(cv2.bitwise_and(image, image, mask=white_mask))
-    cv2.imshow("masked", cv2.bitwise_and(image, image, mask=white_mask))
-    cv2.waitKey(3)
-    # hsv_white = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    # mask = hsv_bound(hsv_white, WHITE_LOWER, WHITE_UPPER)
-    cv2.imshow("bin", path_mask)
-    cv2.waitKey(3)
-    white_lines = extract_lines(path_mask)
-    red_color = (0, 0, 255)
-    draw_lines(white_lines, image, red_color)
-    avg_ang = path_angle_center(white_mask)
-    cv2.putText(
-        image,
-        str(avg_ang),
-        (50, 50),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (0, 0, 0),
-        2,
-        cv2.LINE_AA,
+    # # Lines
+    # white_mask = hsv_bound(hsv, WHITE_UPPER, WHITE_LOWER)
+    # kernel = np.ones((2, 2), np.uint8)
+    # white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_OPEN, kernel)
+    # path_mask = bin_filter(cv2.bitwise_and(image, image, mask=white_mask))
+    # cv2.imshow("masked", cv2.bitwise_and(image, image, mask=white_mask))
+    # cv2.waitKey(3)
+    # # hsv_white = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    # # mask = hsv_bound(hsv_white, WHITE_LOWER, WHITE_UPPER)
+    # cv2.imshow("bin", path_mask)
+    # cv2.waitKey(3)
+    # white_lines = extract_lines(path_mask)
+    # red_color = (0, 0, 255)
+    # draw_lines(white_lines, image, red_color)
+    # avg_ang = path_angle_center(white_mask)
+    # cv2.putText(
+    #     image,
+    #     str(avg_ang),
+    #     (50, 50),
+    #     cv2.FONT_HERSHEY_SIMPLEX,
+    #     1,
+    #     (0, 0, 0),
+    #     2,
+    #     cv2.LINE_AA,
+    # )
+    # cv2.imshow("angle", image)
+    # cv2.waitKey(3)
+    # # Shapes
+    # red_mask = hsv_bound(hsv, RED_LOWER, RED_LOWER)
+    # kernel = np.ones((10, 10), np.uint8)
+    # red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)
+    # detect_shape(red_mask, image)
+    # cv2.imshow("shapes", red_mask)
+    # cv2.imshow("lines", image)
+    # cv2.waitKey(3)
+    # Lowest Shapes
+    red_mask = hsv_bound(
+        cv2.cvtColor(image, cv2.COLOR_BGR2HSV), RED_UPPER, RED_LOWER, denoise=3, fill=6
     )
-    cv2.imshow("angle", image)
-    cv2.waitKey(3)
-    # Shapes
-    red_mask = hsv_bound(hsv, RED_LOWER, RED_LOWER)
-    kernel = np.ones((10, 10), np.uint8)
-    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)
-    detect_shape(red_mask, image)
-    cv2.imshow("shapes", red_mask)
-    cv2.imshow("lines", image)
-    cv2.waitKey(3)
+    lowest_object_coord(red_mask)
 
 
 if __name__ == "__main__":

@@ -58,19 +58,35 @@ class Drive(smach.State):
 
 class Driver(Drive):
     def __init__(self, rate, pub_node):
-        super(Driver, self).__init__(rate, pub_node, ["stop", "exit"])
+        super(Driver, self).__init__(rate, pub_node, ["drive_to_red_line", "exit"])
 
     def execute(self, userdata):
         while not rospy.is_shutdown():
 
-            if self.stop_distance < 0.3:
-                global red_line_num
-                red_line_num += 1
-                return "stop"
+            #TODO: Tweak this based on red line detection
+            if self.stop_distance < 1.0:
+                return "drive_to_red_line"
 
             self.vel_pub.publish(self.twist)
             self.rate.sleep()
 
+        return "exit"
+
+
+class DriveToRedLine(Drive):
+    def __init__(self, rate, pub_node):
+        super(DriveToRedLine, self).__init__(rate, pub_node, ["stop", "exit"])
+
+    def execute(self, userdata):
+        while not ropsy.is_shutdown():
+            # TODO: Drive to red line centroid
+            #       - get twist message from red_line_image_processing
+            #       - publish twist message
+
+
+            if self.stop_distance < 0.3:
+                return "stop"
+        
 
 class LineStop(smach.State):
     def __init__(self, rate, pub_node, led_pub_nodes):
@@ -93,45 +109,59 @@ class LineStop(smach.State):
         return "advance"
 
 
-class LineAdvancer(Drive):
+class Advancer(Drive):
     def __init__(self, rate, pub_node):
-        super(LineAdvancer, self).__init__(rate, pub_node, ["redline", "exit"])
+        super(Advancer, self).__init__(rate, pub_node, ["at_line", "exit"])
+        self.old_stop_distance = 100
 
     def execute(self, userdata):
         while not rospy.is_shutdown():
+            red_distance_change = self.old_stop_distance - self.stop_distance
+            if red_distance_change < -0.2:
+                # TODO: Tweak this so that the rover goes onto the red line
+                for _ in range(0,4):
+                    twist = Twist()
+                    twist.linear.x = 0.3
+                    self.vel_pub.publish(twist)
 
-            if self.stop_distance > 100:
-                #TODO drive forward certain distance so that rover
-                #   is centered on the red line
+                return "at_line"
 
-                return "drive"
-
+            self.old_stop_distance = self.stop_distance
             self.vel_pub.publish(self.twist)
             self.rate.sleep()
 
 
-class RedLine(smach.State):
-    def __init__(self, rate, pub_node):
+class AtLine(smach.State):
+    def __init__(self, rate):
         smach.State.__init__(self, outcomes=["drive", "location1", "location2", "location3", "exit"])
         self.rate = rate
-        self.vel_pub = pub_node
         self.current_red_line = 0
 
-        # IMPORTANT: These states currently assumme that location2 
-        # redline is only scanned once
+        # IMPORTANT: These states currently assume that the red line at location2 
+        # is counted twice (for both directions)
         self.next_states = {
             1: "drive",
-            2: "location1",
+            2: "turn_left_1",
             3: "drive",
-            4: "location2",
-            5: "drive",
+            4: "turn_left_2_start",
+            5: "turn_left_2_end",
             6: "drive",
-            7: "location3",
-            8: "location3",
-            9: "location3",
+            7: "drive",
+            7: "turn_left_3",
+            8: "turn_left_3",
+            9: "turn_left_3",
             10: "exit"
         }
 
     def execute(self, userdata):
         current_red_line += 1
         return self.next_states[red_line_num]
+
+class TurnRight(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["drive", "exit"])
+        self.rate = rate
+        self.vel_pub = pub_node
+
+    def execute(self, userdata):
+        return "drive"

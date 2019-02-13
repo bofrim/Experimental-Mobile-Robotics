@@ -26,8 +26,8 @@ def main():
     cmd_vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
     light_pubs = []
-    light_pubs.append(rospy.Publisher('/mobile_base/commands/led1',Led))
-    light_pubs.append(rospy.Publisher('/mobile_base/commands/led2',Led))
+    light_pubs.append(rospy.Publisher('/mobile_base/commands/led1',Led, queue_size=1))
+    light_pubs.append(rospy.Publisher('/mobile_base/commands/led2',Led, queue_size=1))
     rate = rospy.Rate(10)
 
     with state_machine:

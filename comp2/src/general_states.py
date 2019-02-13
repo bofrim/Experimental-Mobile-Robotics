@@ -11,17 +11,10 @@ from time import time
 
 class Drive(smach.State):
     def __init__(self, rate, pub_node, outcomes):
-
         smach.State.__init__(self, outcomes=outcomes)  # ["stop", "exit"])
         self.bridge = cv_bridge.CvBridge()
         self.rate = rate
         self.vel_pub = pub_node
-        self.stop_sub = rospy.Subscriber(
-            "red_line_distance", Float32, self.red_line_callback
-        )
-        self.image_sub = rospy.Subscriber(
-            "camera/rgb/image_raw", Image, self.image_callback
-        )
         self.stop_distance = 1000
         self.prev_err = 0
         self.twist = Twist()
@@ -61,6 +54,13 @@ class Driver(Drive):
         super(Driver, self).__init__(rate, pub_node, ["drive_to_red_line", "exit"])
 
     def execute(self, userdata):
+        rospy.Subscriber(
+            "red_line_distance", Float32, self.red_line_callback
+        )
+        rospy.Subscriber(
+            "camera/rgb/image_raw", Image, self.image_callback
+        )
+
         while not rospy.is_shutdown():
 
             #TODO: Tweak this based on red line detection
@@ -78,6 +78,13 @@ class DriveToRedLine(Drive):
         super(DriveToRedLine, self).__init__(rate, pub_node, ["stop", "exit"])
 
     def execute(self, userdata):
+        rospy.Subscriber(
+            "red_line_distance", Float32, self.red_line_callback
+        )
+        rospy.Subscriber(
+            "camera/rgb/image_raw", Image, self.image_callback
+        )
+
         while not ropsy.is_shutdown():
             # TODO: Drive to red line centroid
             #       - get twist message from red_line_image_processing
@@ -86,6 +93,9 @@ class DriveToRedLine(Drive):
 
             if self.stop_distance < 0.3:
                 return "stop"
+
+            self.vel_pub.publish(self.twist)
+            self.rate.sleep()
         
 
 class LineStop(smach.State):
@@ -115,6 +125,13 @@ class Advancer(Drive):
         self.old_stop_distance = 100
 
     def execute(self, userdata):
+        rospy.Subscriber(
+            "red_line_distance", Float32, self.red_line_callback
+        )
+        rospy.Subscriber(
+            "camera/rgb/image_raw", Image, self.image_callback
+        )
+
         while not rospy.is_shutdown():
             red_distance_change = self.old_stop_distance - self.stop_distance
             if red_distance_change < -0.2:

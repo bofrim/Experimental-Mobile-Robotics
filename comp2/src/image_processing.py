@@ -151,14 +151,14 @@ def path_mass_center(mask, top_frac=0.7, window_frac=0.05, mass_threshold=1000):
     Return the +/- distance between the centroid and the middle of the screen.
     Return None if there is no centroid.
     """
-    mask = crop(mask, upper_crop, top_frac + window_frac):
+    mask = crop(mask, upper_crop, top_frac + window_frac)
     M = cv2.moments(mask)
     if M["m00"] > mass_threshold:
         cx = int(M["m10"] / M["m00"])
         cy = int(M["m01"] / M["m00"])
-        cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
+        cv2.circle(image, (cx, cy), 20, (0, 0, 255), -1)
         return cx - w / 2
-    
+
     return None
 
 

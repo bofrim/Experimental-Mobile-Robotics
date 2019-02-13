@@ -57,29 +57,15 @@ class Drive(smach.State):
 
 class Driver(Drive):
     def __init__(self, rate, pub_node):
-        super(Driver, self).__init__(rate, pub_node, ["location", "stop", "exit"])
+        super(Driver, self).__init__(rate, pub_node, ["stop", "exit"])
 
     def execute(self, userdata):
         while not rospy.is_shutdown():
-
-            # Add condition for Location recognition
 
             if self.stop_distance < 0.3:
+                global red_line_num
+                red_line_num += 1
                 return "stop"
-
-            self.vel_pub.publish(self.twist)
-            self.rate.sleep()
-
-
-class LineAdvancer(Drive):
-    def __init__(self, rate, pub_node):
-        super(LineAdvancer, self).__init__(rate, pub_node, ["drive", "exit"])
-
-    def execute(self, userdata):
-        while not rospy.is_shutdown():
-
-            if self.stop_distance > 100:
-                return "drive"
 
             self.vel_pub.publish(self.twist)
             self.rate.sleep()
@@ -87,7 +73,7 @@ class LineAdvancer(Drive):
 
 class LineStop(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["zone_complete", "exit"])
+        smach.State.__init__(self, outcomes=["advance", "exit"])
         self.rate = rate
         self.vel_pub = pub_node
 
@@ -95,4 +81,48 @@ class LineStop(smach.State):
         for _ in range(50):
             self.vel_pub.publish(Twist())
             self.rate.sleep()
-        return "zone_complete"
+        return "advance"
+
+
+class LineAdvancer(Drive):
+    def __init__(self, rate, pub_node):
+        super(LineAdvancer, self).__init__(rate, pub_node, ["redline", "exit"])
+
+    def execute(self, userdata):
+        while not rospy.is_shutdown():
+
+            if self.stop_distance > 100:
+                #TODO drive forward certain distance so that rover
+                #   is centered on the red line
+
+                return "drive"
+
+            self.vel_pub.publish(self.twist)
+            self.rate.sleep()
+
+
+class RedLine(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["drive", "location1", "location2", "location3", "exit"])
+        self.rate = rate
+        self.vel_pub = pub_node
+        self.current_red_line = 0
+
+        # IMPORTANT: These states currently assumme that location2 
+        # redline is only scanned once
+        self.next_states = {
+            1: "drive",
+            2: "location1",
+            3: "drive",
+            4: "location2",
+            5: "drive",
+            6: "drive",
+            7: "location3",
+            8: "location3",
+            9: "location3",
+            10: "exit"
+        }
+
+    def execute(self, userdata):
+        current_red_line += 1
+        return self.next_states[red_line_num]

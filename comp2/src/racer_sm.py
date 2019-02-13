@@ -10,6 +10,7 @@ from location3 import Location3
 
 from general_states import Driver, LineAdvancer, LineStop
 from geometry_msgs.msg import Twist
+from kobuki_msgs.msg import Led
 from time import time
 
 
@@ -24,6 +25,10 @@ def main():
     state_introspection_server.start()
 
     cmd_vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=1)
+
+    light_pubs = []
+    light_pubs.append(rospy.Publisher('/mobile_base/commands/led1',Led))
+    light_pubs.append(rospy.Publisher('/mobile_base/commands/led2',Led))
     rate = rospy.Rate(10)
 
     with state_machine:
@@ -35,7 +40,7 @@ def main():
 
             smach.StateMachine.add(
                 "STOP",
-                LineStop(rate, cmd_vel_pub),
+                LineStop(rate, cmd_vel_pub, light_pubs),
                 transitions={"advance": "ADVANCE", "exit": "exit"},
             )
 

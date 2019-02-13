@@ -3,6 +3,7 @@ import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 
 from geometry_msgs.msg import Twist
+from kobuki_msgs.msg import Led
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
 from time import time
@@ -72,15 +73,23 @@ class Driver(Drive):
 
 
 class LineStop(smach.State):
-    def __init__(self, rate, pub_node):
+    def __init__(self, rate, pub_node, led_pub_nodes):
         smach.State.__init__(self, outcomes=["advance", "exit"])
         self.rate = rate
         self.vel_pub = pub_node
+        self.led_pubs = led_pub_nodes
 
     def execute(self, userdata):
         for _ in range(50):
             self.vel_pub.publish(Twist())
             self.rate.sleep()
+
+        led_msg = Led()
+        led_msg.value = Led.RED
+
+        led_pub_nodes[0].publish(led_msg)
+        led_pub_nodes[0].publish(led_msg)
+
         return "advance"
 
 

@@ -133,7 +133,7 @@ class Advancer(Drive):
 
 class AtLine(smach.State):
     def __init__(self, rate):
-        smach.State.__init__(self, outcomes=["drive", "location1", "location2", "location3", "exit"])
+        smach.State.__init__(self, outcomes=["drive", "turn_left_1", "turn_left_2_start", "turn_left_2_end", "turn_left_3", "exit"])
         self.rate = rate
         self.current_red_line = 0
 

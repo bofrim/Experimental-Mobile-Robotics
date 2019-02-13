@@ -17,21 +17,20 @@ class TurnLeft2Start(smach.State):
 
 class DriveToObjects(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["detect_2", "exit"])
+        smach.State.__init__(self, outcomes=["detect2", "exit"])
         self.bridge = cv_bridge.CvBridge()
         self.rate = rate
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        return "detect_2"
+        return "detect2"
 
 class Detect2(smach.State):
     def __init__(self, rate):
         smach.State.__init__(self, outcomes=["turn_180", "exit"])
         self.bridge = cv_bridge.CvBridge()
         self.rate = rate
-        self.vel_pub = pub_node
-
+        
     def execute(self, userdata):
         return "turn_180"
 

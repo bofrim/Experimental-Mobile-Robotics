@@ -5,7 +5,7 @@ import smach
 import smach_ros
 
 from location1 import TurnLeft1, Detect1
-from location2 import TurnLeft2End, DriveToObjects, Detect2, Turn180, TurnLeft2End
+from location2 import TurnLeft2Start, DriveToObjects, Detect2, Turn180, TurnLeft2End
 from location3 import TurnLeft3, Detect3
 
 from general_states import Driver, DriveToRedLine, LineStop, Advancer, AtLine, TurnRight 
@@ -69,11 +69,11 @@ def main():
             smach.StateMachine.add(
                 "TURN_LEFT_1",
                 TurnLeft1(rate, cmd_vel_pub),
-                transitions={"detect_1":"DETECT_1", "exit": "exit"}
+                transitions={"detect1":"DETECT1", "exit": "exit"}
             )
 
             smach.StateMachine.add(
-                "DETECT_1",
+                "DETECT1",
                 Detect1(rate),
                 transitions={"turn_right": "TURN_RIGHT", "exit": "exit"} 
             )
@@ -93,11 +93,11 @@ def main():
             smach.StateMachine.add(
                 "DRIVE_TO_OBJECTS",
                 DriveToObjects(rate, cmd_vel_pub),
-                transitions={"detect_2": "DETECT_2", "exit": "exit"}
+                transitions={"detect2": "DETECT2", "exit": "exit"}
             )
 
             smach.StateMachine.add(
-                "DETECT_2",
+                "DETECT2",
                 Detect2(rate),
                 transitions={"turn_180": "TURN_180", "exit": "exit"} 
             )
@@ -117,11 +117,11 @@ def main():
             smach.StateMachine.add(
                 "TURN_LEFT_3",
                 TurnLeft3(rate, cmd_vel_pub),
-                transitions={"detect_3":"DETECT_3", "exit": "exit"}
+                transitions={"detect3":"DETECT3", "exit": "exit"}
             )
 
             smach.StateMachine.add(
-                "DETECT_3",
+                "DETECT3",
                 Detect3(rate),
                 transitions={"turn_right": "TURN_RIGHT", "exit": "exit"} 
             )

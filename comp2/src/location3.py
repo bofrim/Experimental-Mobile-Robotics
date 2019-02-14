@@ -4,12 +4,20 @@ import smach, smach_ros
 
 from geometry_msgs.msg import Twist
 
-class Location3(smach.State):
+class TurnLeft3(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["drive", "exit"])
-        self.bridge = cv_bridge.CvBridge()
+        smach.State.__init__(self, outcomes=["detect3", "exit"])
         self.rate = rate
         self.vel_pub = pub_node
 
-    def execute():
-        return "drive"
+    def execute(self, userdata):
+        return "detect3"
+
+
+class Detect3(smach.State):
+    def __init__(self, rate):
+        smach.State.__init__(self, outcomes=["turn_right", "exit"])
+        self.rate = rate
+
+    def execute(self, userdata):
+        return "turn_right"

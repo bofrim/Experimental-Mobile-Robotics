@@ -4,6 +4,7 @@ import rospy, cv2, cv_bridge, numpy
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float32
 import numpy as np
+from image_processing import get_red_mask, lowest_object_coord
 
 TOP_CROP_FRAC = 0.0
 BOTTOM_CROP_FRAC = 0.0
@@ -62,34 +63,39 @@ class RedLineFinder:
         )
 
     def image_callback(self, msg):
-        image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        mask = threshold_hsv_360(hsv=hsv)
+        mask = get_red_mask(msg)
+        _, y = lowest_object_coord(mask)
+        height, _, _ = image.shape
+        self.red_line_pub.publish(Float32(point_to_distance(float(y), 0, height))))
 
-        height, width, _ = image.shape
-        search_top = height * TOP_CROP_FRAC
-        search_bot = height * 1 - BOTTOM_CROP_FRAC
-        mask[0:search_top, 0:width] = 0
-        mask[search_bot:height, 0:width] = 0
+        # image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # mask = threshold_hsv_360(hsv=hsv)
 
-        moment = cv2.moments(mask)
-        print("mass: ", moment["m00"])
-        if moment["m00"] > MASS_THRESHOLD:
-            cx = int(moment["m10"] / moment["m00"])
-            cy = int(moment["m01"] / moment["m00"])
+        # height, width, _ = image.shape
+        # search_top = height * TOP_CROP_FRAC
+        # search_bot = height * 1 - BOTTOM_CROP_FRAC
+        # mask[0:search_top, 0:width] = 0
+        # mask[search_bot:height, 0:width] = 0
 
-            cv2.circle(image, (cx, cy), 20, (0, 0, 255), -1)
-            cv2.circle(mask, (cx, cy), 20, (0, 0, 255), -1)
-            print("cy", cy)
+        # moment = cv2.moments(mask)
+        # print("mass: ", moment["m00"])
+        # if moment["m00"] > MASS_THRESHOLD:
+        #     cx = int(moment["m10"] / moment["m00"])
+        #     cy = int(moment["m01"] / moment["m00"])
 
-            print("distance: ", point_to_distance(float(cy), 0, height))
-            self.red_line_pub.publish(Float32(point_to_distance(float(cy), 0, height)))
-        else:
-            self.red_line_pub.publish(Float32(1000))
+        #     cv2.circle(image, (cx, cy), 20, (0, 0, 255), -1)
+        #     cv2.circle(mask, (cx, cy), 20, (0, 0, 255), -1)
+        #     print("cy", cy)
 
-        cv2.imshow("window", image)
-        cv2.imshow("mask", mask)
-        cv2.waitKey(3)
+        #     print("distance: ", point_to_distance(float(cy), 0, height))
+        #     self.red_line_pub.publish(Float32(point_to_distance(float(cy), 0, height)))
+        # else:
+        #     self.red_line_pub.publish(Float32(1000))
+
+        # cv2.imshow("window", image)
+        # cv2.imshow("mask", mask)
+        # cv2.waitKey(3)
 
 
 rospy.init_node("red_line_finder")

@@ -110,6 +110,54 @@ class DriveToObjects(Drive):
         return "detect2"
 
 
+class DriveFromObjects(Drive):
+    def __init__(self, rate, pub_node):
+        super(DriveFromObjects, self).__init__(rate, pub_node, ["advance", "exit"])
+
+    def execute(self, userdata):
+        self.stop_distance = -1
+        prev_err = 0
+
+        stop_sub = rospy.Subscriber(
+            "red_line_distance", Centroid, self.red_line_callback
+        )
+        image_sub = rospy.Subscriber(
+            "white_line_centroid", Centroid, self.image_callback
+        )
+
+        while not rospy.is_shutdown():
+
+            twist_msg = Twist()
+
+            # TODO: Tweak this based on red line detection
+            if self.stop_distance > 350:
+                stop_sub.unregister()
+                image_sub.unregister()
+
+                return "advance"
+
+            curr_err = self.path_centroid.err
+
+            delta_err = curr_err - prev_err
+
+            if self.path_centroid.cx == -1 or self.path_centroid.cy == -1:
+                twist_msg.linear.x = 0.1
+                twist_msg.angular.z = -0.2
+            else:
+                twist_msg.linear.x = 0.3
+                twist_msg.angular.z = (-float(curr_err) / 225) + (-float(delta_err) / 225)
+        
+            prev_err = curr_err
+
+            self.vel_pub.publish(twist_msg)
+            self.rate.sleep()
+
+        stop_sub.unregister()
+        image_sub.unregister()
+        return "exit"
+
+
+
 class Detect2(smach.State):
     def __init__(self, rate):
         smach.State.__init__(self, outcomes=["turn_180", "exit"])
@@ -122,14 +170,14 @@ class Detect2(smach.State):
 
 class Turn180(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["drive", "exit"])
+        smach.State.__init__(self, outcomes=["drive_from_objects", "exit"])
         self.bridge = cv_bridge.CvBridge()
         self.rate = rate
         self.vel_pub = pub_node
 
     def execute(self, userdata):
         simple_turn(180, self.vel_pub)
-        return "drive"
+        return "drive_from_objects"
 
 
 class TurnLeft2End(smach.State):
@@ -140,12 +188,11 @@ class TurnLeft2End(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(50, self.vel_pub)
+        simple_turn(60, self.vel_pub)
         return "drive"
 
 
 if __name__ == "__main__":
-
     rospy.init_node("loc2")
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():

@@ -5,7 +5,7 @@ import smach
 import smach_ros
 
 from location1 import TurnLeft1, Detect1
-from location2 import TurnLeft2Start, DriveToObjects, Detect2, Turn180, TurnLeft2End
+from location2 import TurnLeft2Start, DriveToObjects, DriveFromObjects, Detect2, Turn180, TurnLeft2End
 from location3 import TurnLeft3, Detect3
 
 from general_states import Driver, Advancer, AtLine, TurnRight
@@ -99,7 +99,13 @@ def main():
         smach.StateMachine.add(
             "TURN_180",
             Turn180(rate, cmd_vel_pub),
-            transitions={"drive": "DRIVE", "exit": "exit"},
+            transitions={"drive_from_objects": "DRIVE_FROM_OBJECTS", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "DRIVE_FROM_OBJECTS",
+            DriveFromObjects(rate, cmd_vel_pub),
+            transitions={"advance": "ADVANCE", "exit": "exit"},
         )
 
         smach.StateMachine.add(

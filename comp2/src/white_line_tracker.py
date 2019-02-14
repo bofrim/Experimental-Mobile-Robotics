@@ -29,7 +29,7 @@ class WhiteLineTracker:
 
         h, w, d = image.shape
         search_top = h * 0.8
-        search_bot = search_top + 70
+        search_bot = search_top + 90
         mask[0:search_top, 0:w] = 0
         mask[search_bot:h, 0:w] = 0
         M = cv2.moments(mask)

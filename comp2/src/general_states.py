@@ -23,7 +23,7 @@ class Drive(smach.State):
         self.twist = Twist()
         self.path_centroid = Centroid()
         self.stop_centroid = Centroid()
-        self.speed = 0.3
+        self.speed = 0.35
 
     def red_line_callback(self, msg):
         self.stop_distance = msg.cy
@@ -35,7 +35,7 @@ class Drive(smach.State):
 
         delta_err = curr_err - self.prev_err
         self.twist.linear.x = self.speed
-        self.twist.angular.z = (-float(curr_err) / 200) + (-float(delta_err) / 200)
+        self.twist.angular.z = (-float(curr_err) / 225) + (-float(delta_err) / 200)
         self.prev_err = curr_err
 
 
@@ -55,7 +55,7 @@ class Driver(Drive):
         while not rospy.is_shutdown():
 
             # TODO: Tweak this based on red line detection
-            if self.stop_distance > 380:
+            if self.stop_distance > 390:
                 stop_sub.unregister()
                 image_sub.unregister()
 
@@ -109,8 +109,8 @@ class Advancer(Drive):
             curr_err = self.stop_centroid.err
             delta_err = curr_err - prev_stop_err
             twist.linear.x = 0.3
-            twist.angular.z = (-float(curr_err) / 1400) + (-float(delta_err) / 1400)
-
+            twist.angular.z = (-float(curr_err) / 1600) + (-float(delta_err) / 1600)
+            
             prev_stop_err = curr_err
             self.vel_pub.publish(twist)
             self.rate.sleep()

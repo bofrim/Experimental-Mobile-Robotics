@@ -18,7 +18,7 @@ class TurnLeft3(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(65, self.vel_pub)
+        simple_turn(63, self.vel_pub)
         return "detect3"
 
 
@@ -29,7 +29,7 @@ class AdjustmentTurn3(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(15, self, vel_pub)
+        simple_turn(15, self.vel_pub)
         return "drive"
 
 
@@ -37,11 +37,14 @@ class Detect3(smach.State):
     def __init__(self, rate, light_pubs):
         smach.State.__init__(self, outcomes=["turn_right", "exit"])
         self.rate = rate
+        self.light_pubs = light_pubs
 
     def execute(self, userdata):
         global the_shape
         red_mask = get_red_mask()
-        shape_moments = zip(detect_shape(red_mask, threshold=500))
+
+        shapes, moments = detect_shape(red_mask, threshold=500)
+        shape_moments = zip(shapes, moments)
 
         largest_shape = Shapes.unknown
         largest_mass = 0

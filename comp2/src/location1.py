@@ -62,10 +62,11 @@ class Detect1(smach.State):
 
         sound_msg = Sound()
         sound_msg.value = Sound.ON
-        for _ in range(max_count):
-            self.sound_pub.publish()
-            for _ in range(15):
+        for i in range(max_count-1):
+            self.sound_pub.publish(sound_msg)
+            for _ in range(8):
                 self.rate.sleep()
+        self.sound_pub.publish(sound_msg)
 
         return "turn_right"
 

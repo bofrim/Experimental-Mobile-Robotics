@@ -65,8 +65,8 @@ class RedLineFinder:
     def image_callback(self, msg):
         mask = get_red_mask(msg)
         _, y = lowest_object_coord(mask)
-        height, _, _ = image.shape
-        self.red_line_pub.publish(Float32(point_to_distance(float(y), 0, height))))
+        height, _ = mask.shape
+        self.red_line_pub.publish(Float32(point_to_distance(float(y), 0, height)))
 
         # image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)

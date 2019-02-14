@@ -32,7 +32,7 @@ class TurnLeft2Start(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(65, self.vel_pub)
+        simple_turn(55, self.vel_pub)
         return "drive_to_objects"
 
 
@@ -145,11 +145,11 @@ class DriveFromObjects(Drive):
             delta_err = curr_err - prev_err
 
             if self.path_centroid.cx == -1 or self.path_centroid.cy == -1:
-                twist_msg.linear.x = 0.1
-                twist_msg.angular.z = -0.3
+                twist_msg.linear.x = 0.075
+                twist_msg.angular.z = -0.2
             else:
                 twist_msg.linear.x = 0.25
-                twist_msg.angular.z = (-float(curr_err) / 200) + (
+                twist_msg.angular.z = (-float(curr_err) / 150) + (
                     -float(delta_err) / 225
                 )
 

@@ -29,8 +29,15 @@ RED_UPPER = [20, 255, 255]
 RED_LOWER = [317, 180, 80]
 GREEN_UPPER = [176, 255, 255]
 GREEN_LOWER = [100, 84, 58]
+<<<<<<< HEAD
 WHITE_UPPER = [360, 16, 255]
 WHITE_LOWER = [0, 0, 200]
+=======
+GREEN_UPPER_180 = [75, 255, 255]
+GREEN_LOWER_180 = [45, 84, 58]
+WHITE_UPPER = [255, 10, 255]
+WHITE_LOWER = [0, 0, 170]
+>>>>>>> @{-1}
 
 
 def threshold_hsv_360(hsv, h_max, h_min, s_max, s_min, v_max, v_min, denoise=0, fill=0):
@@ -92,13 +99,20 @@ def crop(image, upper_frac, window_frac):
     return image
 
 
-def count_objects(mask):
+def count_objects(mask, threshold=1000, canvas=None):
     """Count the number of distinct objects in the boolean image."""
-    contours, _ = cv2.findContours(mask, 1, 2)
-    return len(contours)
+    _, contours, _ = cv2.findContours(mask, 1, 2)
+    moments = [cv2.moments(cont) for cont in contours]
+    big_moments = [m for m in moments if m["m00"] > threshold]
+    if canvas != None:
+        for moment in big_moments:
+            cx = int(moment["m10"] / moment["m00"])
+            cy = int(moment["m01"] / moment["m00"])
+            cv2.circle(canvas, (cx, cy), 20, (0, 0, 255), -1)
+    return len(big_moments)
 
 
-def detect_shape(mask, canvas=None):
+def detect_shape(mask, canvas=None, threshold=100):
     """Detect a shape contained in an image.
     
     Adappted from: https://stackoverflow.com/questions/11424002/how-to-detect-simple-geometric-shapes-using-opencv
@@ -107,36 +121,37 @@ def detect_shape(mask, canvas=None):
     moments = []
     _, contours, _ = cv2.findContours(mask, 1, 2)
     for cnt in contours:
-        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
-        if len(approx) == 3:
-            if canvas != None:
-                cv2.drawContours(canvas, [cnt], 0, (0, 255, 0), -1)
-            detected_shapes.append(Shapes.triangle)
-            moments.append(cv2.moments(cnt))
+        if cv2.moments(cnt)["m00"] > threshold:
+            approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+            if len(approx) == 3:
+                if canvas != None:
+                    cv2.drawContours(canvas, [cnt], 0, (0, 255, 0), -1)
+                detected_shapes.append(Shapes.triangle)
+                moments.append(cv2.moments(cnt))
 
-        elif len(approx) == 4:
-            if canvas != None:
-                cv2.drawContours(canvas, [cnt], 0, (0, 0, 255), -1)
-            detected_shapes.append(Shapes.square)
-            moments.append(cv2.moments(cnt))
-        elif len(approx) == 5:
-            if canvas != None:
-                cv2.drawContours(canvas, [cnt], 0, 255, -1)
-            detected_shapes.append(Shapes.pentagon)
-            moments.append(cv2.moments(cnt))
-        elif len(approx) > 9:
-            if canvas != None:
-                cv2.drawContours(canvas, [cnt], 0, (0, 255, 255), -1)
-            detected_shapes.append(Shapes.circle)
-            moments.append(cv2.moments(cnt))
-        else:
-            detected_shapes.append(Shapes.unknown)
-            moments.append(cv2.moments(cnt))
+            elif len(approx) == 4:
+                if canvas != None:
+                    cv2.drawContours(canvas, [cnt], 0, (0, 0, 255), -1)
+                detected_shapes.append(Shapes.square)
+                moments.append(cv2.moments(cnt))
+            elif len(approx) == 5:
+                if canvas != None:
+                    cv2.drawContours(canvas, [cnt], 0, 255, -1)
+                detected_shapes.append(Shapes.pentagon)
+                moments.append(cv2.moments(cnt))
+            elif len(approx) > 9:
+                if canvas != None:
+                    cv2.drawContours(canvas, [cnt], 0, (0, 255, 255), -1)
+                detected_shapes.append(Shapes.circle)
+                moments.append(cv2.moments(cnt))
+            else:
+                detected_shapes.append(Shapes.unknown)
+                moments.append(cv2.moments(cnt))
     return detected_shapes, moments
 
 
-def detect_green_shape(hsv_image):
-    mask = hsv_bound(hsv_image, GREEN_UPPER, GREEN_LOWER, denoise=5)
+def detect_green_shape(image=None):
+    mask = get_green_mask(image)
     shapes, moments = detect_shape(mask)
     if len(shapes) == 1:
         return shapes[0]
@@ -250,7 +265,8 @@ def get_green_mask(image=None):
     bridge = cv_bridge.CvBridge()
     image = bridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    return hsv_bound(hsv, GREEN_UPPER, GREEN_LOWER, 3, 6)
+    mask = cv2.inRange(hsv, np.array(GREEN_LOWER_180), np.array(GREEN_UPPER_180))
+    return mask
 
 
 def draw_lines(lines, canvas, rgb=(0, 0, 255)):

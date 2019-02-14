@@ -205,6 +205,26 @@ def extract_lines(mask, rho=2, theta=np.pi / 180, thresh=400):
     return cv2.HoughLines(mask, rho, theta, thresh)
 
 
+def get_red_mask(image=None):
+    """"""
+    if image is None:
+        image = rospy.wait_for_message("camera/rgb/image_raw", Image)
+    bridge = cv_bridge.CvBridge()
+    image = bridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    return hsv_bound(hsv, RED_UPPER, RED_LOWER, 3, 6)
+
+
+def get_white_mask(image=None):
+    """"""
+    if image is None:
+        image = rospy.wait_for_message("camera/rgb/image_raw", Image)
+    bridge = cv_bridge.CvBridge()
+    image = bridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    return hsv_bound(hsv, WHITE_UPPER, WHITE_LOWER, 3, 6)
+
+
 def draw_lines(lines, canvas, rgb=(0, 0, 255)):
     if lines is None:
         lines = []

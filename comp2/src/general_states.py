@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 
@@ -24,15 +25,10 @@ class Drive(smach.State):
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        cv2.imshow("original_image", image)
-        cv2.waitKey(3)
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         lower_white = numpy.array([0, 0, 170])
         upper_white = numpy.array([255, 10, 255])
         mask = cv2.inRange(hsv, lower_white, upper_white)
-
-        cv2.imshow("initial_mask", mask)
-        cv2.waitKey(3)
 
         h, w, d = image.shape
         search_top = h * 0.75
@@ -43,7 +39,7 @@ class Drive(smach.State):
         if M["m00"] > 0:
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
-            cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
+            cv2.circle(image, (cx, cy), 20, (0, 0, 255), -1)
             curr_err = cx - w / 2
             delta_err = curr_err - self.prev_err
 
@@ -68,11 +64,10 @@ class Driver(Drive):
 
         while not rospy.is_shutdown():
 
-            #TODO: Tweak this based on red line detection
-            if self.stop_distance < 1.0:
+            # TODO: Tweak this based on red line detection
+            if self.stop_distance < 0.4:
                 return "drive_to_red_line"
 
-            print self.twist.linear.x
             self.vel_pub.publish(self.twist)
             self.rate.sleep()
 
@@ -90,14 +85,17 @@ class DriveToRedLine(Drive):
         self.image_sub = rospy.Subscriber(
             "camera/rgb/image_raw", Image, self.image_callback
         )
-        while not ropsy.is_shutdown():
+        while not rospy.is_shutdown():
             # TODO: Drive to red line centroid
             #       - get twist message from red_line_image_processing
             #       - publish twist message
 
-            if self.stop_distance < 0.3:
+            if self.stop_distance < 0.2:
                 return "stop"
-        
+
+            self.vel_pub.publish(self.twist)
+            self.rate.sleep()
+
 
 class LineStop(smach.State):
     def __init__(self, rate, pub_node, led_pub_nodes):
@@ -114,8 +112,8 @@ class LineStop(smach.State):
         led_msg = Led()
         led_msg.value = Led.RED
 
-        led_pub_nodes[0].publish(led_msg)
-        led_pub_nodes[0].publish(led_msg)
+        self.led_pubs[0].publish(led_msg)
+        self.led_pubs[0].publish(led_msg)
 
         return "advance"
 
@@ -136,7 +134,7 @@ class Advancer(Drive):
             red_distance_change = self.old_stop_distance - self.stop_distance
             if red_distance_change < -0.2:
                 # TODO: Tweak this so that the rover goes onto the red line
-                for _ in range(0,4):
+                for _ in range(0, 4):
                     twist = Twist()
                     twist.linear.x = 0.3
                     self.vel_pub.publish(twist)
@@ -150,11 +148,21 @@ class Advancer(Drive):
 
 class AtLine(smach.State):
     def __init__(self, rate):
-        smach.State.__init__(self, outcomes=["drive", "turn_left_1", "turn_left_2_start", "turn_left_2_end", "turn_left_3", "exit"])
+        smach.State.__init__(
+            self,
+            outcomes=[
+                "drive",
+                "turn_left_1",
+                "turn_left_2_start",
+                "turn_left_2_end",
+                "turn_left_3",
+                "exit",
+            ],
+        )
         self.rate = rate
-        self.current_red_line = 0
+        self.red_line_num = 0
 
-        # IMPORTANT: These states currently assume that the red line at location2 
+        # IMPORTANT: These states currently assume that the red line at location2
         # is counted twice (for both directions)
         self.next_states = {
             1: "drive",
@@ -167,12 +175,13 @@ class AtLine(smach.State):
             7: "turn_left_3",
             8: "turn_left_3",
             9: "turn_left_3",
-            10: "exit"
+            10: "exit",
         }
 
     def execute(self, userdata):
-        current_red_line += 1
-        return self.next_states[red_line_num]
+        self.red_line_num += 1
+        return self.next_states[self.red_line_num]
+
 
 class TurnRight(smach.State):
     def __init__(self, rate, pub_node):

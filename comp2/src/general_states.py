@@ -9,12 +9,13 @@ from operations import simple_turn
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
 from time import time
+from image_processing import get_white_mask, crop, path_mass_center
 
 
 class Drive(smach.State):
     def __init__(self, rate, pub_node, outcomes):
         smach.State.__init__(self, outcomes=outcomes)  # ["stop", "exit"])
-        self.bridge = cv_bridge.CvBridge()
+        # self.bridge = cv_bridge.CvBridge()
         self.rate = rate
         self.vel_pub = pub_node
         self.stop_distance = 1000
@@ -25,30 +26,30 @@ class Drive(smach.State):
         self.stop_distance = msg.data
 
     def image_callback(self, msg):
-        image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        lower_white = numpy.array([0, 0, 170])
-        upper_white = numpy.array([255, 10, 255])
-        mask = cv2.inRange(hsv, lower_white, upper_white)
+        mask = get_white_mask(msg)
+        curr_err = path_mass_center(mask)
 
-        h, w, d = image.shape
-        search_top = h * 0.75
-        search_bot = search_top + 60
-        mask[0:search_top, 0:w] = 0
-        mask[search_bot:h, 0:w] = 0
-        M = cv2.moments(mask)
-        if M["m00"] > 0:
-            cx = int(M["m10"] / M["m00"])
-            cy = int(M["m01"] / M["m00"])
-            cv2.circle(image, (cx, cy), 20, (0, 0, 255), -1)
-            curr_err = cx - w / 2
+        if curr_err is not None:
             delta_err = curr_err - self.prev_err
-
             self.twist.linear.x = 0.4
             self.twist.angular.z = (-float(curr_err) / 200) + (-float(delta_err) / 200)
+            self.prev_err = curr_err
 
-        cv2.imshow("window", mask)
-        cv2.waitKey(3)
+            # h, w, d = image.shape
+            # search_top = h * 0.75
+            # search_bot = search_top + 60
+            # mask[0:search_top, 0:w] = 0
+            # mask[search_bot:h, 0:w] = 0
+            # M = cv2.moments(mask)
+            # if M["m00"] > 0:
+            #     cx = int(M["m10"] / M["m00"])
+            #     cy = int(M["m01"] / M["m00"])
+            #     cv2.circle(image, (cx, cy), 20, (0, 0, 255), -1)
+            #     curr_err = cx - w / 2
+            #     delta_err = curr_err - self.prev_err
+
+            # self.twist.linear.x = 0.4
+            # self.twist.angular.z = (-float(curr_err) / 200) + (-float(delta_err) / 200)
 
 
 class Driver(Drive):

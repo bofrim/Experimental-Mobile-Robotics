@@ -11,21 +11,21 @@ def simple_turn(angle, twist_pub, max_error=3, anglular_scale=1.0):
     theta = init_theta
     direction = np.sign(angle)
     target_theta = init_theta + angle
-    print("pre target: ", target_theta)
+    # print("pre target: ", target_theta)
     if target_theta > 180:
         target_theta = target_theta % 360 - 360
     if target_theta < -180:
         target_theta = target_theta % -360 + 360
-    print("post target: ", target_theta)
+    # print("post target: ", target_theta)
 
     while abs(target_theta - theta) > max_error:
-        print(
-            "target, theta, diff > max err",
-            int(target_theta),
-            int(theta),
-            int(abs(target_theta - theta)),
-            int(max_error),
-        )
+        # print(
+        #     "target, theta, diff > max err",
+        #     int(target_theta),
+        #     int(theta),
+        #     int(abs(target_theta - theta)),
+        #     int(max_error),
+        # )
         out_twist = Twist()
         out_twist.angular.z = direction * anglular_scale
         twist_pub.publish(out_twist)

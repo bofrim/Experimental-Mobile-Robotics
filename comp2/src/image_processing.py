@@ -29,8 +29,8 @@ RED_UPPER = [20, 255, 255]
 RED_LOWER = [317, 180, 80]
 GREEN_UPPER = [176, 255, 255]
 GREEN_LOWER = [100, 84, 58]
-WHITE_UPPER = [255, 10, 255]
-WHITE_LOWER = [0, 0, 170]
+WHITE_UPPER = [360, 16, 255]
+WHITE_LOWER = [0, 0, 200]
 
 
 def threshold_hsv_360(hsv, h_max, h_min, s_max, s_min, v_max, v_min, denoise=0, fill=0):
@@ -81,10 +81,10 @@ def crop(image, upper_frac, window_frac):
     shape = image.shape
     h = shape[0]
     w = shape[1]
-    print("h, w", h, w)
+    #print("h, w", h, w)
     top = h * upper_frac
     bottom = h * (upper_frac + window_frac)
-    print("top, bottom", top, bottom)
+    #print("top, bottom", top, bottom)
     if top > bottom:
         print("WARNING: Cropping everything! Top, bottom:", top, bottom)
     image[0:top, 0:w] = 0
@@ -171,7 +171,7 @@ def path_mass_center(mask, top_frac=0.7, window_frac=0.3, mass_threshold=1000):
     Return None if there is no centroid.
     """
     h, w = mask.shape
-    print("h, w", h, w)
+    #print("h, w", h, w)
     search_top = h * top_frac
     search_bot = h * (top_frac + window_frac)
     mask[0:search_top, 0:w] = 0
@@ -256,7 +256,7 @@ def get_green_mask(image=None):
 def draw_lines(lines, canvas, rgb=(0, 0, 255)):
     if lines is None:
         lines = []
-    print("Len lines=", len(lines))
+    #print("Len lines=", len(lines))
     for line in lines:
         rho = line[0][0]
         theta = line[0][1]
@@ -315,8 +315,8 @@ def image_callback(msg):
     # # Shapes
     red_mask = hsv_bound(hsv, RED_UPPER, RED_LOWER, denoise=8)
     shapes, moments = detect_shape(red_mask, image)
-    print(detect_shape(red_mask, image))
-    print([(int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])) for M in moments])
+    #print(detect_shape(red_mask, image))
+    #print([(int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])) for M in moments])
     cv2.imshow("mask", red_mask)
     cv2.imshow("image", image)
     cv2.waitKey(3)

@@ -22,7 +22,7 @@ class TurnLeft2Start(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(80, self.vel_pub)
+        simple_turn(70, self.vel_pub)
         return "drive_to_objects"
 
 
@@ -56,7 +56,7 @@ class DriveToObjects(Drive):
                 [int(M["m01"] / (M["m00"] + 1.5)) for M in big_moments]
             )
             print("#shapes, avg y", len(big_moments), avg_y_center)
-            if len(big_moments) == 3 and avg_y_center > 150:
+            if len(big_moments) == 3 and avg_y_center > 110:
                 # Maybe center the shapes
                 print("SAW IMAGES")
                 break
@@ -95,7 +95,7 @@ class TurnLeft2End(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(80, self.vel_pub)
+        simple_turn(50, self.vel_pub)
         return "drive"
 
 

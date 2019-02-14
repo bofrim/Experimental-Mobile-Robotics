@@ -51,10 +51,8 @@ class Driver(Drive):
         image_sub = rospy.Subscriber(
             "white_line_centroid", Centroid, self.image_callback
         )
-        print("subbed")
 
         while not rospy.is_shutdown():
-            print("drive...")
 
             # TODO: Tweak this based on red line detection
             if self.stop_distance > 380:
@@ -150,10 +148,10 @@ class AtLine(smach.State):
             5: "turn_left_2_end",
             6: "drive",
             7: "drive",
-            7: "turn_left_3",
             8: "turn_left_3",
             9: "turn_left_3",
-            10: "exit",
+            10: "turn_left_3",
+            11: "exit",
         }
 
     def execute(self, userdata):

@@ -2,6 +2,7 @@
     <include file="$(find turtlebot_bringup)/launch/minimal.launch"/>
     <include file="$(find turtlebot_bringup)/launch/3dsensor.launch"/>
     <node name="red_line_finder" pkg="comp2" type="red_line_finder.py"/>
+    <node name="white_line_finder" pkg="comp2" type="white_line_tracker.py" />
     <!--
     <node name="racer_sm" pkg="comp2" type="racer_sm.py">
         <remap from="cmd_vel" to="cmd_vel_mux/input/teleop"/>

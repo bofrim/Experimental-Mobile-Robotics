@@ -17,6 +17,9 @@ class WhiteLineTracker:
         )
 
     def image_callback(self, msg):
+        # mask = get_white_mask(msg)
+        # curr_err = path_mass_center(mask)
+
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         lower_white = numpy.array([0, 0, 170])

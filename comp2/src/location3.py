@@ -22,6 +22,17 @@ class TurnLeft3(smach.State):
         return "detect3"
 
 
+class AdjustmentTurn3(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["drive", "exit"])
+        self.rate = rate
+        self.vel_pub = pub_node
+
+    def execute(self, userdata):
+        simple_turn(15, self, vel_pub)
+        return "drive"
+
+
 class Detect3(smach.State):
     def __init__(self, rate, light_pubs):
         smach.State.__init__(self, outcomes=["turn_right", "exit"])

@@ -110,7 +110,7 @@ class Advancer(Drive):
             delta_err = curr_err - prev_stop_err
             twist.linear.x = 0.3
             twist.angular.z = (-float(curr_err) / 1600) + (-float(delta_err) / 1600)
-            
+
             prev_stop_err = curr_err
             self.vel_pub.publish(twist)
             self.rate.sleep()
@@ -132,6 +132,7 @@ class AtLine(smach.State):
                 "turn_left_1",
                 "turn_left_2_start",
                 "turn_left_2_end",
+                "adjust_3",
                 "turn_left_3",
                 "exit",
             ],
@@ -149,7 +150,7 @@ class AtLine(smach.State):
             4: "turn_left_2_start",
             5: "turn_left_2_end",
             6: "drive",
-            7: "drive",
+            7: "adjust_3",
             8: "turn_left_3",
             9: "turn_left_3",
             10: "turn_left_3",

@@ -64,7 +64,7 @@ class DriveToObjects(Drive):
                 [int(M["m01"] / (M["m00"] + 1.5)) for M in big_moments]
             )
             print("#shapes, avg y", len(big_moments), avg_y_center)
-            if len(big_moments) > 0 and avg_y_center > 150:
+            if len(big_moments) > 0 and avg_y_center > 160:
                 # Try to get a good read on the shape
                 shape_count = 0
                 prev_shape = Shapes.unknown
@@ -79,10 +79,10 @@ class DriveToObjects(Drive):
                         prev_shape = shape
                         shape_count = 0
 
-                    if shape_count > 8:
+                    if shape_count > 6:
                         break
                         
-                    # self.rate.sleep()
+                    self.rate.sleep()
 
                     #Possibly add timeout - which sets triangle ;)
 
@@ -142,10 +142,10 @@ class DriveFromObjects(Drive):
 
             if self.path_centroid.cx == -1 or self.path_centroid.cy == -1:
                 twist_msg.linear.x = 0.1
-                twist_msg.angular.z = -0.2
+                twist_msg.angular.z = -0.3
             else:
                 twist_msg.linear.x = 0.3
-                twist_msg.angular.z = (-float(curr_err) / 225) + (-float(delta_err) / 225)
+                twist_msg.angular.z = (-float(curr_err) / 225) + (-float(delta_err) / 225 )
         
             prev_err = curr_err
 
@@ -188,7 +188,7 @@ class TurnLeft2End(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(60, self.vel_pub)
+        simple_turn(40, self.vel_pub)
         return "drive"
 
 

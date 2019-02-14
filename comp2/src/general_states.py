@@ -23,7 +23,7 @@ class Drive(smach.State):
         self.twist = Twist()
         self.path_centroid = Centroid()
         self.stop_centroid = Centroid()
-        self.speed = 0.35
+        self.speed = 0.32
 
     def red_line_callback(self, msg):
         self.stop_distance = msg.cy
@@ -35,7 +35,7 @@ class Drive(smach.State):
 
         delta_err = curr_err - self.prev_err
         self.twist.linear.x = self.speed
-        self.twist.angular.z = (-float(curr_err) / 225) + (-float(delta_err) / 200)
+        self.twist.angular.z = (-float(curr_err) / 300) + (-float(delta_err) / 300)
         self.prev_err = curr_err
 
 
@@ -103,7 +103,7 @@ class Advancer(Drive):
         red_line_sub = rospy.Subscriber(
             "red_line_distance", Centroid, self.red_line_callback
         )
-        for _ in range(0, 20):
+        for _ in range(0, 18):
             twist = Twist()
 
             curr_err = self.stop_centroid.err
@@ -173,5 +173,5 @@ class TurnRight(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(-80, self.vel_pub)
+        simple_turn(-70, self.vel_pub)
         return "drive"

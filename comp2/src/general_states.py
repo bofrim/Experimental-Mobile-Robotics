@@ -174,5 +174,5 @@ class TurnRight(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(-70, self.vel_pub)
+        simple_turn(-77, self.vel_pub)
         return "drive"

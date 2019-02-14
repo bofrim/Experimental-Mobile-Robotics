@@ -17,7 +17,7 @@ class TurnLeft1(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(75, self.vel_pub)
+        simple_turn(67, self.vel_pub)
 
         # Remove this
         for _ in range(25):

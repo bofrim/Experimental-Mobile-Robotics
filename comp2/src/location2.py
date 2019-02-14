@@ -144,8 +144,8 @@ class DriveFromObjects(Drive):
                 twist_msg.linear.x = 0.1
                 twist_msg.angular.z = -0.3
             else:
-                twist_msg.linear.x = 0.3
-                twist_msg.angular.z = (-float(curr_err) / 225) + (-float(delta_err) / 225 )
+                twist_msg.linear.x = 0.25
+                twist_msg.angular.z = (-float(curr_err) / 200) + (-float(delta_err) / 225 )
         
             prev_err = curr_err
 

@@ -8,7 +8,7 @@ from location1 import TurnLeft1, Detect1
 from location2 import TurnLeft2Start, DriveToObjects, Detect2, Turn180, TurnLeft2End
 from location3 import TurnLeft3, Detect3
 
-from general_states import Driver, LineStop, Advancer, AtLine, TurnRight
+from general_states import Driver, Advancer, AtLine, TurnRight
 from geometry_msgs.msg import Twist
 from kobuki_msgs.msg import Led
 from time import time

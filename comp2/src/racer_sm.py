@@ -5,12 +5,19 @@ import smach
 import smach_ros
 
 from location1 import TurnLeft1, Detect1
-from location2 import TurnLeft2Start, DriveToObjects, DriveFromObjects, Detect2, Turn180, TurnLeft2End
+from location2 import (
+    TurnLeft2Start,
+    DriveToObjects,
+    DriveFromObjects,
+    Detect2,
+    Turn180,
+    TurnLeft2End,
+)
 from location3 import TurnLeft3, Detect3
 
 from general_states import Driver, Advancer, AtLine, TurnRight
 from geometry_msgs.msg import Twist
-from kobuki_msgs.msg import Led
+from kobuki_msgs.msg import Led, Sound
 from time import time
 
 
@@ -28,6 +35,7 @@ def main():
     light_pubs = []
     light_pubs.append(rospy.Publisher("/mobile_base/commands/led1", Led, queue_size=1))
     light_pubs.append(rospy.Publisher("/mobile_base/commands/led2", Led, queue_size=1))
+    sound_pub = rospy.Publisher("/mobile_base/commands/sound", Sound, queue_size=1)
     led_off_msg = Led()
     led_off_msg.value = Led.BLACK
     light_pubs[0].publish(led_off_msg)
@@ -68,7 +76,7 @@ def main():
 
         smach.StateMachine.add(
             "DETECT1",
-            Detect1(rate, light_pubs),
+            Detect1(rate, light_pubs, sound_pub),
             transitions={"turn_right": "TURN_RIGHT", "exit": "exit"},
         )
 

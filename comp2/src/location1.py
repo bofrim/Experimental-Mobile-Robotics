@@ -5,7 +5,7 @@ import smach, smach_ros
 from operations import simple_turn
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
-from kobuki_msgs.msg import Led
+from kobuki_msgs.msg import Led, Sound
 
 from image_processing import get_red_mask, count_objects, detect_shape
 
@@ -28,10 +28,11 @@ class TurnLeft1(smach.State):
 
 
 class Detect1(smach.State):
-    def __init__(self, rate, light_pubs):
+    def __init__(self, rate, light_pubs, sound_pub):
         smach.State.__init__(self, outcomes=["turn_right", "exit"])
         self.rate = rate
         self.light_pubs = light_pubs
+        self.sound_pub = sound_pub
 
     def execute(self, userdata):
         # TODO Add Detection
@@ -58,6 +59,13 @@ class Detect1(smach.State):
             self.light_pubs[0].publish(led_on_msg)
         else:
             self.light_pubs[0].publish(led_off_msg)
+
+        sound_msg = Sound()
+        sound_msg.value = Sound.ON
+        for _ in range(max_count):
+            self.sound_pub.publish()
+            for _ in range(15):
+                self.rate.sleep()
 
         return "turn_right"
 

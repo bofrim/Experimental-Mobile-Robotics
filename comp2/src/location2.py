@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
+from collections import defaultdict
 
 from operations import simple_turn
 from sensor_msgs.msg import Image
@@ -68,11 +69,13 @@ class DriveToObjects(Drive):
                 # Try to get a good read on the shape
                 shape_count = 0
                 prev_shape = Shapes.unknown
-                while True:
+                shape_totals = defaultdict(int)
+                for _ in range(90):
                     shape = detect_green_shape()
                     if shape == Shapes.unknown:
                         shape_count = 0
                         continue
+                    shape_totals[shape] += 1
                     if shape == prev_shape:
                         shape_count += 1
                     else:
@@ -81,10 +84,11 @@ class DriveToObjects(Drive):
 
                     if shape_count > 6:
                         break
-                        
+                else:
+                    shape = max(shape_totals, key=shape_totals.get)
                     self.rate.sleep()
 
-                    #Possibly add timeout - which sets triangle ;)
+                    # Possibly add timeout - which sets triangle ;)
 
                 # Maybe center the shapes
                 ("SAW IMAGES")
@@ -145,8 +149,10 @@ class DriveFromObjects(Drive):
                 twist_msg.angular.z = -0.3
             else:
                 twist_msg.linear.x = 0.3
-                twist_msg.angular.z = (-float(curr_err) / 225) + (-float(delta_err) / 225 )
-        
+                twist_msg.angular.z = (-float(curr_err) / 225) + (
+                    -float(delta_err) / 225
+                )
+
             prev_err = curr_err
 
             self.vel_pub.publish(twist_msg)
@@ -155,7 +161,6 @@ class DriveFromObjects(Drive):
         stop_sub.unregister()
         image_sub.unregister()
         return "exit"
-
 
 
 class Detect2(smach.State):

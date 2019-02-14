@@ -28,8 +28,8 @@ class WhiteLineTracker:
         mask = hsv_bound(hsv, WHITE_UPPER, WHITE_LOWER, denoise=2, fill=6)
 
         h, w, d = image.shape
-        search_top = h * 0.7
-        search_bot = search_top + 110
+        search_top = h * 0.8
+        search_bot = search_top + 90
         mask[0:search_top, 0:w] = 0
         mask[search_bot:h, 0:w] = 0
         M = cv2.moments(mask)

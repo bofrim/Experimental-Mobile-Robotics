@@ -56,6 +56,7 @@ class Driver(Drive):
         super(Driver, self).__init__(rate, pub_node, ["drive_to_red_line", "exit"])
 
     def execute(self, userdata):
+        self.stop_distance = 1000
         stop_sub = rospy.Subscriber(
             "red_line_distance", Float32, self.red_line_callback
         )
@@ -66,9 +67,10 @@ class Driver(Drive):
             print("drive...")
 
             # TODO: Tweak this based on red line detection
-            if self.stop_distance < 0.5:
+            if self.stop_distance < 0.4:
                 stop_sub.unregister()
                 image_sub.unregister()
+
                 return "drive_to_red_line"
 
             self.vel_pub.publish(self.twist)
@@ -84,6 +86,7 @@ class DriveToRedLine(Drive):
         super(DriveToRedLine, self).__init__(rate, pub_node, ["stop", "exit"])
 
     def execute(self, userdata):
+        self.stop_distance = 1000
         stop_sub = rospy.Subscriber(
             "red_line_distance", Float32, self.red_line_callback
         )
@@ -114,7 +117,7 @@ class LineStop(smach.State):
         self.led_pubs = led_pub_nodes
 
     def execute(self, userdata):
-        for _ in range(50):
+        for _ in range(10):
             self.vel_pub.publish(Twist())
             self.rate.sleep()
 
@@ -141,7 +144,7 @@ class Advancer(Drive):
         image_sub = rospy.Subscriber("camera/rgb/image_raw", Image, self.image_callback)
         # red_distance_change = self.old_stop_distance - self.stop_distance
         # if red_distance_change < -0.3:
-        for _ in range(0, 40):
+        for _ in range(0, 25):
             twist = Twist()
             twist.linear.x = 0.2
             self.vel_pub.publish(twist)

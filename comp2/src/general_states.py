@@ -18,14 +18,16 @@ class Drive(smach.State):
         smach.State.__init__(self, outcomes=outcomes)  # ["stop", "exit"])
         self.rate = rate
         self.vel_pub = pub_node
-        self.stop_distance = 1000
+        self.stop_distance = -1
         self.prev_err = 0
         self.twist = Twist()
         self.path_centroid = Centroid()
+        self.stop_centroid = Centroid()
         self.speed = 0.3
 
     def red_line_callback(self, msg):
-        self.stop_distance = msg.data
+        self.stop_distance = msg.cy
+        self.stop_centroid = msg
 
     def image_callback(self, msg):
         curr_err = msg.err
@@ -42,9 +44,9 @@ class Driver(Drive):
         super(Driver, self).__init__(rate, pub_node, ["advance", "exit"])
 
     def execute(self, userdata):
-        self.stop_distance = 1000
+        self.stop_distance = -1
         stop_sub = rospy.Subscriber(
-            "red_line_distance", Float32, self.red_line_callback
+            "red_line_distance", Centroid, self.red_line_callback
         )
         image_sub = rospy.Subscriber(
             "white_line_centroid", Centroid, self.image_callback
@@ -55,7 +57,7 @@ class Driver(Drive):
             print("drive...")
 
             # TODO: Tweak this based on red line detection
-            if self.stop_distance < 0.15:
+            if self.stop_distance > 380:
                 stop_sub.unregister()
                 image_sub.unregister()
 
@@ -68,7 +70,7 @@ class Driver(Drive):
         image_sub.unregister()
         return "exit"
 
-
+'''
 class LineStop(smach.State):
     def __init__(self, rate, pub_node, led_pub_nodes):
         smach.State.__init__(self, outcomes=["advance", "exit"])
@@ -88,27 +90,29 @@ class LineStop(smach.State):
         self.led_pubs[0].publish(led_msg)
 
         return "advance"
+'''
 
 
 class Advancer(Drive):
     def __init__(self, rate, pub_node):
         super(Advancer, self).__init__(rate, pub_node, ["at_line", "exit"])
-        self.old_stop_distance = 1000
+        prev_stop_err = 0
 
     def execute(self, userdata):
-        self.old_stop_distance = 1000
+        prev_stop_err = 0
         self.twist = Twist()
-        stop_sub = rospy.Subscriber(
-            "red_line_distance", Float32, self.red_line_callback
+        red_line_sub = rospy.Subscriber(
+            "red_line_distance", Centroid, self.red_line_callback
         )
-        image_sub = rospy.Subscriber(
-            "white_line_centroid", Centroid, self.image_callback
-        )
-        # red_distance_change = self.old_stop_distance - self.stop_distance
-        # if red_distance_change < -0.3:
-        for _ in range(0, 15):
+        for _ in range(0, 20):
             twist = Twist()
+
+            curr_err = self.stop_centroid.err
+            delta_err = curr_err - prev_stop_err
             twist.linear.x = 0.3
+            twist.angular.z = (-float(curr_err) / 1400) + (-float(delta_err) / 1400)
+            
+            prev_stop_err = curr_err
             self.vel_pub.publish(twist)
             self.rate.sleep()
 
@@ -116,13 +120,8 @@ class Advancer(Drive):
             self.vel_pub.publish(Twist())
             self.rate.sleep()
 
-        stop_sub.unregister()
-        image_sub.unregister()
+        red_line_sub.unregister()
         return "at_line"
-
-        # self.old_stop_distance = self.stop_distance
-        # self.vel_pub.publish(self.twist)
-        # self.rate.sleep()
 
 
 class AtLine(smach.State):
@@ -170,5 +169,5 @@ class TurnRight(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(-90, self.vel_pub)
+        simple_turn(-80, self.vel_pub)
         return "drive"

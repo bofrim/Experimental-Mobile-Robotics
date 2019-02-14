@@ -22,7 +22,7 @@ class TurnLeft2Start(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(90, self.vel_pub)
+        simple_turn(80, self.vel_pub)
         return "drive_to_objects"
 
 
@@ -95,7 +95,7 @@ class TurnLeft2End(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(90, self.vel_pub)
+        simple_turn(80, self.vel_pub)
         return "drive"
 
 

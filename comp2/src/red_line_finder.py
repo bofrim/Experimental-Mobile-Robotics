@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 from math import atan
+from image_processing import get_red_mask, lowest_object_coord
 import rospy, cv2, cv_bridge, numpy
+import numpy as np
+
+from comp2.msg import Centroid
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float32
-import numpy as np
-from image_processing import get_red_mask, lowest_object_coord
 
 TOP_CROP_FRAC = 0.0
 BOTTOM_CROP_FRAC = 0.0
@@ -21,18 +23,6 @@ S_MAX = 255
 S_MIN = 180
 V_MAX = 255
 V_MIN = 80
-
-
-def interpolate_map(value, orig_1, orig_2, map_1, map_2):
-    orig_range = orig_2 - orig_1
-    map_range = map_2 - map_1
-    range_frac = float(value - orig_1) / float(orig_range)
-    return map_1 + (range_frac * map_range)
-
-
-def point_to_distance(y_value, y_min, y_max):
-    """This is fundamentally flawed, but it will work for this application."""
-    return interpolate_map(y_value, y_min, y_max, TOP_DISTANCE, BOTTOM_DISTANCE)
 
 
 def threshold_hsv_360(
@@ -59,14 +49,23 @@ class RedLineFinder:
             "camera/rgb/image_raw", Image, self.image_callback
         )
         self.red_line_pub = rospy.Publisher(
-            "red_line_distance", Float32, queue_size="1"
+            "red_line_distance", Centroid, queue_size="1"
         )
 
     def image_callback(self, msg):
         mask = get_red_mask(msg)
-        _, y = lowest_object_coord(mask)
-        height, _ = mask.shape
-        self.red_line_pub.publish(Float32(point_to_distance(float(y), 0, height)))
+        cx, cy = lowest_object_coord(mask)
+        height, width = mask.shape
+
+        cv2.imshow("mask", mask)
+        cv2.waitKey(3)
+
+        centroid_msg = Centroid()
+        centroid_msg.cx = cx
+        centroid_msg.cy = cy
+        centroid_msg.err = cx - width / 2
+
+        self.red_line_pub.publish(centroid_msg)
 
         # image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -98,6 +97,8 @@ class RedLineFinder:
         # cv2.waitKey(3)
 
 
-rospy.init_node("red_line_finder")
-follower = RedLineFinder()
-rospy.spin()
+if __name__ == "__main__":
+    rospy.init_node("red_line_finder")
+    follower = RedLineFinder()
+    rospy.spin()
+

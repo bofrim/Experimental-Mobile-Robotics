@@ -36,53 +36,27 @@ class Drive(smach.State):
 
 class Driver(Drive):
     def __init__(self, rate, pub_node):
-        super(Driver, self).__init__(rate, pub_node, ["drive_to_red_line", "exit"])
+        super(Driver, self).__init__(rate, pub_node, ["advance", "exit"])
 
     def execute(self, userdata):
         self.stop_distance = 1000
         stop_sub = rospy.Subscriber(
             "red_line_distance", Float32, self.red_line_callback
         )
-        image_sub = rospy.Subscriber("white_line_centroid", Centroid, self.image_callback)
+        image_sub = rospy.Subscriber(
+            "white_line_centroid", Centroid, self.image_callback
+        )
         print("subbed")
 
         while not rospy.is_shutdown():
             print("drive...")
 
             # TODO: Tweak this based on red line detection
-            if self.stop_distance < 0.4:
+            if self.stop_distance < 0.3:
                 stop_sub.unregister()
                 image_sub.unregister()
 
-                return "drive_to_red_line"
-
-            self.vel_pub.publish(self.twist)
-            self.rate.sleep()
-
-        stop_sub.unregister()
-        image_sub.unregister()
-        return "exit"
-
-
-class DriveToRedLine(Drive):
-    def __init__(self, rate, pub_node):
-        super(DriveToRedLine, self).__init__(rate, pub_node, ["stop", "exit"])
-
-    def execute(self, userdata):
-        self.stop_distance = 1000
-        stop_sub = rospy.Subscriber(
-            "red_line_distance", Float32, self.red_line_callback
-        )
-        image_sub = rospy.Subscriber("white_line_centroid", Centroid, self.image_callback)
-        while not rospy.is_shutdown():
-            # TODO: Drive to red line centroid
-            #       - get twist message from red_line_image_processing
-            #       - publish twist message
-
-            if self.stop_distance < 0.2:
-                stop_sub.unregister()
-                image_sub.unregister()
-                return "stop"
+                return "advance"
 
             self.vel_pub.publish(self.twist)
             self.rate.sleep()
@@ -124,7 +98,9 @@ class Advancer(Drive):
         stop_sub = rospy.Subscriber(
             "red_line_distance", Float32, self.red_line_callback
         )
-        image_sub = rospy.Subscriber("white_line_centroid", Centroid, self.image_callback)
+        image_sub = rospy.Subscriber(
+            "white_line_centroid", Centroid, self.image_callback
+        )
         # red_distance_change = self.old_stop_distance - self.stop_distance
         # if red_distance_change < -0.3:
         for _ in range(0, 25):

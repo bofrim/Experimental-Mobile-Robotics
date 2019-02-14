@@ -72,7 +72,7 @@ def hsv_bound(image, upper_bound, lower_bound, denoise=0, fill=0):
     )
 
 
-def crop(image, upper_frac, lower_frac):
+def crop(image, upper_frac, window_frac):
     """Crop an image to the fraction bounds.
 
     Fractions are measured from the top of the screen.
@@ -81,8 +81,12 @@ def crop(image, upper_frac, lower_frac):
     shape = image.shape
     h = shape[0]
     w = shape[1]
+    print("h, w", h, w)
     top = h * upper_frac
-    bottom = h * lower_frac
+    bottom = h * (upper_frac + window_frac)
+    print("top, bottom", top, bottom)
+    if top > bottom:
+        print("WARNING: Cropping everything! Top, bottom:", top, bottom)
     image[0:top, 0:w] = 0
     image[bottom:h, 0:w] = 0
     return image
@@ -133,33 +137,40 @@ def detect_green_shape(hsv_image):
     return Shapes.unknown
 
 
-def path_angle_center(mask, upper_crop=0.5, lower_crop=0.95):
-    """Detect the angle of a path.
-    
-    Crop fractions are measured from the top of the screen.
-    """
-    mask = crop(mask, upper_crop, lower_crop)
-    lines = extract_lines(mask)
-    if lines is not None:
-        angles = [
-            np.rad2deg(line[0][1])
-            if np.rad2deg(line[0][1]) < 90
-            else np.rad2deg(line[0][1]) - 180
-            for line in lines
-        ]
-        return np.average(angles)
+# def path_angle_center(mask, upper_crop=0.5, lower_crop=0.95):
+#     """Detect the angle of a path.
 
-    return None
+#     Crop fractions are measured from the top of the screen.
+#     """
+#     mask = crop(mask, upper_crop, lower_crop)
+#     lines = extract_lines(mask)
+#     if lines is not None:
+#         angles = [
+#             np.rad2deg(line[0][1])
+#             if np.rad2deg(line[0][1]) < 90
+#             else np.rad2deg(line[0][1]) - 180
+#             for line in lines
+#         ]
+#         return np.average(angles)
+
+#     return None
 
 
-def path_mass_center(mask, top_frac=0.7, window_frac=0.05, mass_threshold=1000):
+def path_mass_center(mask, top_frac=0.7, window_frac=0.3, mass_threshold=1000):
     """Detect the centroid of a path.
     
     Crop fractions are measured from the top of the screen.
     Return the +/- distance between the centroid and the middle of the screen.
     Return None if there is no centroid.
     """
-    mask = crop(mask, top_frac, top_frac + window_frac)
+    h, w = mask.shape
+    print("h, w", h, w)
+    search_top = h * top_frac
+    search_bot = h * (top_frac + window_frac)
+    mask[0:search_top, 0:w] = 0
+    mask[search_bot:h, 0:w] = 0
+    cv2.imshow("windowasdf_crop", mask)
+    cv2.waitKey(3)
     M = cv2.moments(mask)
     if M["m00"] > mass_threshold:
         cx = int(M["m10"] / M["m00"])

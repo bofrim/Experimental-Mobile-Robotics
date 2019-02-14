@@ -109,6 +109,10 @@ class Advancer(Drive):
             self.vel_pub.publish(twist)
             self.rate.sleep()
 
+        for _ in range(10):
+            self.vel_pub.publish(Twist())
+            self.rate.sleep()
+
         stop_sub.unregister()
         image_sub.unregister()
         return "at_line"

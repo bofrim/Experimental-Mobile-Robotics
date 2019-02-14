@@ -24,10 +24,15 @@ class Drive(smach.State):
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        cv2.imshow("original_image", image)
+        cv2.waitKey(3)
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         lower_white = numpy.array([0, 0, 170])
         upper_white = numpy.array([255, 10, 255])
         mask = cv2.inRange(hsv, lower_white, upper_white)
+
+        cv2.imshow("initial_mask", mask)
+        cv2.waitKey(3)
 
         h, w, d = image.shape
         search_top = h * 0.75
@@ -54,10 +59,10 @@ class Driver(Drive):
         super(Driver, self).__init__(rate, pub_node, ["drive_to_red_line", "exit"])
 
     def execute(self, userdata):
-        rospy.Subscriber(
+        self.stop_sub = rospy.Subscriber(
             "red_line_distance", Float32, self.red_line_callback
         )
-        rospy.Subscriber(
+        self.image_sub = rospy.Subscriber(
             "camera/rgb/image_raw", Image, self.image_callback
         )
 
@@ -67,6 +72,7 @@ class Driver(Drive):
             if self.stop_distance < 1.0:
                 return "drive_to_red_line"
 
+            print self.twist.linear.x
             self.vel_pub.publish(self.twist)
             self.rate.sleep()
 
@@ -78,24 +84,19 @@ class DriveToRedLine(Drive):
         super(DriveToRedLine, self).__init__(rate, pub_node, ["stop", "exit"])
 
     def execute(self, userdata):
-        rospy.Subscriber(
+        self.stop_sub = rospy.Subscriber(
             "red_line_distance", Float32, self.red_line_callback
         )
-        rospy.Subscriber(
+        self.image_sub = rospy.Subscriber(
             "camera/rgb/image_raw", Image, self.image_callback
         )
-
         while not ropsy.is_shutdown():
             # TODO: Drive to red line centroid
             #       - get twist message from red_line_image_processing
             #       - publish twist message
 
-
             if self.stop_distance < 0.3:
                 return "stop"
-
-            self.vel_pub.publish(self.twist)
-            self.rate.sleep()
         
 
 class LineStop(smach.State):
@@ -125,13 +126,12 @@ class Advancer(Drive):
         self.old_stop_distance = 100
 
     def execute(self, userdata):
-        rospy.Subscriber(
+        self.stop_sub = rospy.Subscriber(
             "red_line_distance", Float32, self.red_line_callback
         )
-        rospy.Subscriber(
+        self.image_sub = rospy.Subscriber(
             "camera/rgb/image_raw", Image, self.image_callback
         )
-
         while not rospy.is_shutdown():
             red_distance_change = self.old_stop_distance - self.stop_distance
             if red_distance_change < -0.2:

@@ -35,7 +35,7 @@ class Drive(smach.State):
 
         delta_err = curr_err - self.prev_err
         self.twist.linear.x = self.speed
-        self.twist.angular.z = (-float(curr_err) / 300) + (-float(delta_err) / 300)
+        self.twist.angular.z = (-float(curr_err) / 260) + (-float(delta_err) / 250)
         self.prev_err = curr_err
 
 
@@ -103,7 +103,7 @@ class Advancer(Drive):
         red_line_sub = rospy.Subscriber(
             "red_line_distance", Centroid, self.red_line_callback
         )
-        for _ in range(0, 18):
+        for _ in range(0, 20):
             twist = Twist()
 
             curr_err = self.stop_centroid.err

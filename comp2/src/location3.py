@@ -46,7 +46,7 @@ class Detect3(smach.State):
         largest_shape = Shapes.unknown
         largest_mass = 0
 
-        for shape, moment in shape_moments:
+        for (shape, moment) in shape_moments:
             if moment["m00"] > largest_mass:
                 largest_mass = moment["m00"]
                 largest_shape = shape

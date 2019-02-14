@@ -104,33 +104,40 @@ def detect_shape(mask, canvas=None):
     Adappted from: https://stackoverflow.com/questions/11424002/how-to-detect-simple-geometric-shapes-using-opencv
     """
     detected_shapes = []
+    moments = []
     _, contours, _ = cv2.findContours(mask, 1, 2)
     for cnt in contours:
         approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
         if len(approx) == 3:
-            if canvas:
+            if canvas != None:
                 cv2.drawContours(canvas, [cnt], 0, (0, 255, 0), -1)
             detected_shapes.append(Shapes.triangle)
+            moments.append(cv2.moments(cnt))
+
         elif len(approx) == 4:
-            if canvas:
+            if canvas != None:
                 cv2.drawContours(canvas, [cnt], 0, (0, 0, 255), -1)
             detected_shapes.append(Shapes.square)
+            moments.append(cv2.moments(cnt))
         elif len(approx) == 5:
-            if canvas:
+            if canvas != None:
                 cv2.drawContours(canvas, [cnt], 0, 255, -1)
             detected_shapes.append(Shapes.pentagon)
+            moments.append(cv2.moments(cnt))
         elif len(approx) > 9:
-            if canvas:
+            if canvas != None:
                 cv2.drawContours(canvas, [cnt], 0, (0, 255, 255), -1)
             detected_shapes.append(Shapes.circle)
+            moments.append(cv2.moments(cnt))
         else:
             detected_shapes.append(Shapes.unknown)
-    return detected_shapes
+            moments.append(cv2.moments(cnt))
+    return detected_shapes, moments
 
 
 def detect_green_shape(hsv_image):
     mask = hsv_bound(hsv_image, GREEN_UPPER, GREEN_LOWER, denoise=5)
-    shapes = detect_shape(mask)
+    shapes, moments = detect_shape(mask)
     if len(shapes) == 1:
         return shapes[0]
 
@@ -236,6 +243,16 @@ def get_white_mask(image=None):
     return hsv_bound(hsv, WHITE_UPPER, WHITE_LOWER, 3, 6)
 
 
+def get_green_mask(image=None):
+    """"""
+    if image is None:
+        image = rospy.wait_for_message("camera/rgb/image_raw", Image)
+    bridge = cv_bridge.CvBridge()
+    image = bridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    return hsv_bound(hsv, GREEN_UPPER, GREEN_LOWER, 3, 6)
+
+
 def draw_lines(lines, canvas, rgb=(0, 0, 255)):
     if lines is None:
         lines = []
@@ -296,13 +313,13 @@ def image_callback(msg):
     # cv2.imshow("angle", image)
     # cv2.waitKey(3)
     # # Shapes
-    # red_mask = hsv_bound(hsv, RED_LOWER, RED_LOWER)
-    # kernel = np.ones((10, 10), np.uint8)
-    # red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)
-    # detect_shape(red_mask, image)
-    # cv2.imshow("shapes", red_mask)
-    # cv2.imshow("lines", image)
-    # cv2.waitKey(3)
+    red_mask = hsv_bound(hsv, RED_UPPER, RED_LOWER, denoise=8)
+    shapes, moments = detect_shape(red_mask, image)
+    print(detect_shape(red_mask, image))
+    print([(int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])) for M in moments])
+    cv2.imshow("mask", red_mask)
+    cv2.imshow("image", image)
+    cv2.waitKey(3)
     # Lowest Shapes
     red_mask = hsv_bound(
         cv2.cvtColor(image, cv2.COLOR_BGR2HSV), RED_UPPER, RED_LOWER, denoise=3, fill=6

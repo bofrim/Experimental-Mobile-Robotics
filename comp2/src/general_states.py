@@ -23,6 +23,7 @@ class Drive(smach.State):
         self.twist = Twist()
         self.path_centroid = Centroid()
         self.stop_centroid = Centroid()
+        self.speed = 0.3
 
     def red_line_callback(self, msg):
         self.stop_distance = msg.cy
@@ -33,7 +34,7 @@ class Drive(smach.State):
         self.path_centroid = msg
 
         delta_err = curr_err - self.prev_err
-        self.twist.linear.x = 0.4
+        self.twist.linear.x = self.speed
         self.twist.angular.z = (-float(curr_err) / 200) + (-float(delta_err) / 200)
         self.prev_err = curr_err
 

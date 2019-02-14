@@ -13,6 +13,12 @@ class TurnLeft1(smach.State):
 
     def execute(self, userdata):
         simple_turn(90, self.vel_pub)
+
+        # Remove this
+        for _ in range(25):
+            self.vel_pub.publish(Twist())
+            self.rate.sleep()
+
         return "detect1"
 
 

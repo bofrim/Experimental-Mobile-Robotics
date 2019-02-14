@@ -6,6 +6,7 @@ import smach, smach_ros
 from comp2.msg import Centroid
 from sensor_msgs.msg import Image
 
+
 class WhiteLineTracker:
     def __init__(self):
         self.bridge = cv_bridge.CvBridge()
@@ -27,12 +28,12 @@ class WhiteLineTracker:
         mask = cv2.inRange(hsv, lower_white, upper_white)
 
         h, w, d = image.shape
-        search_top = h * 0.75
-        search_bot = search_top + 60
+        search_top = h * 0.85
+        search_bot = search_top + 50
         mask[0:search_top, 0:w] = 0
         mask[search_bot:h, 0:w] = 0
         M = cv2.moments(mask)
-        if M["m00"] > 0:
+        if M["m00"] > 1000:
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
             cv2.circle(image, (cx, cy), 20, (0, 0, 255), -1)
@@ -43,10 +44,18 @@ class WhiteLineTracker:
             centroid_msg.err = cx - w / 2
 
             self.centroid_pub.publish(centroid_msg)
+        else:
+            centroid_msg = Centroid()
+            centroid_msg.cx = -1
+            centroid_msg.cy = -1
+            centroid_msg.err = 0
+            self.centroid_pub.publish(centroid_msg)
 
         cv2.imshow("window", mask)
         cv2.waitKey(3)
 
+
 rospy.init_node("white_line_finder")
 follower = WhiteLineTracker()
-rospy.spin()    
+rospy.spin()
+

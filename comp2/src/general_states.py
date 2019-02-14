@@ -21,12 +21,14 @@ class Drive(smach.State):
         self.stop_distance = 1000
         self.prev_err = 0
         self.twist = Twist()
+        self.path_centroid = Centroid()
 
     def red_line_callback(self, msg):
         self.stop_distance = msg.data
 
     def image_callback(self, msg):
         curr_err = msg.err
+        self.path_centroid = msg
 
         delta_err = curr_err - self.prev_err
         self.twist.linear.x = 0.4
@@ -52,7 +54,7 @@ class Driver(Drive):
             print("drive...")
 
             # TODO: Tweak this based on red line detection
-            if self.stop_distance < 0.3:
+            if self.stop_distance < 0.15:
                 stop_sub.unregister()
                 image_sub.unregister()
 
@@ -103,9 +105,9 @@ class Advancer(Drive):
         )
         # red_distance_change = self.old_stop_distance - self.stop_distance
         # if red_distance_change < -0.3:
-        for _ in range(0, 25):
+        for _ in range(0, 15):
             twist = Twist()
-            twist.linear.x = 0.2
+            twist.linear.x = 0.3
             self.vel_pub.publish(twist)
             self.rate.sleep()
 

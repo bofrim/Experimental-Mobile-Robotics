@@ -82,9 +82,12 @@ class DriveToObjects(Drive):
                         prev_shape = shape
                         shape_count = 0
 
-                    if shape_count > 6:
+                    if shape_count > 8:
+                        print("discovered with a sequence")
                         break
                 else:
+                    print("discovered with accumulation")
+                    print(shape_totals)
                     shape = max(shape_totals, key=shape_totals.get)
                     self.rate.sleep()
 

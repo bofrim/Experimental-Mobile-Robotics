@@ -5,13 +5,22 @@ import smach, smach_ros
 from operations import simple_turn
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
+from kobuki_msgs.msg import Led
 
 from comp2.msg import Centroid
 from general_states import Drive
 
-from image_processing import get_red_mask, get_green_mask, detect_shape
+from image_processing import (
+    get_red_mask,
+    get_green_mask,
+    detect_shape,
+    detect_green_shape,
+    Shapes,
+)
 import cv_bridge
 import cv2
+
+the_shape = Shapes.unknown
 
 
 class TurnLeft2Start(smach.State):
@@ -27,10 +36,12 @@ class TurnLeft2Start(smach.State):
 
 
 class DriveToObjects(Drive):
-    def __init__(self, rate, pub_node):
+    def __init__(self, rate, pub_node, light_pubs):
         super(DriveToObjects, self).__init__(rate, pub_node, ["detect2", "exit"])
+        self.light_pubs = light_pubs
 
     def execute(self, userdata):
+        global the_shape
         white_line_sub = rospy.Subscriber(
             "white_line_centroid", Centroid, self.image_callback
         )
@@ -45,20 +56,54 @@ class DriveToObjects(Drive):
             mask = red_mask | green_mask
             canvas = cv_bridge.CvBridge().imgmsg_to_cv2(image, desired_encoding="bgr8")
             shapes, moments = detect_shape(mask, canvas=canvas)
-            big_moments = [m for m in moments if m["m00"] > 3000]
+            big_moments = [m for m in moments if m["m00"] > 3050]
 
             cv2.imshow("window", canvas)
             cv2.waitKey(3)
-            avg_x_center = numpy.mean(
-                [int(M["m10"] / (M["m00"] + 1.5)) for M in big_moments]
-            )
             avg_y_center = numpy.mean(
                 [int(M["m01"] / (M["m00"] + 1.5)) for M in big_moments]
             )
             print("#shapes, avg y", len(big_moments), avg_y_center)
-            if len(big_moments) == 3 and avg_y_center > 110:
+            if len(big_moments) > 0 and avg_y_center > 150:
+                # Try to get a good read on the shape
+                shape_count = 0
+                prev_shape = Shapes.unknown
+                while True:
+                    shape = detect_green_shape()
+                    if shape == Shapes.unknown:
+                        shape_count = 0
+                        continue
+                    if shape == prev_shape:
+                        shape_count += 1
+                    else:
+                        prev_shape = shape
+                        shape_count = 0
+
+                    if shape_count > 8:
+                        break
+                        
+                    # self.rate.sleep()
+
+                    #Possibly add timeout - which sets triangle ;)
+
                 # Maybe center the shapes
-                print("SAW IMAGES")
+                ("SAW IMAGES")
+                the_shape = shape
+                print("The shape is: ", the_shape.name)
+                # Show the count
+                led_on_msg = Led()
+                led_on_msg.value = Led.ORANGE
+                led_off_msg = Led()
+                led_off_msg.value = Led.BLACK
+                if len(big_moments) & 0x01:
+                    self.light_pubs[1].publish(led_on_msg)
+                else:
+                    self.light_pubs[1].publish(led_off_msg)
+
+                if len(big_moments) & 0x02:
+                    self.light_pubs[0].publish(led_on_msg)
+                else:
+                    self.light_pubs[0].publish(led_off_msg)
                 break
 
         white_line_sub.unregister()
@@ -151,19 +196,25 @@ if __name__ == "__main__":
     rospy.init_node("loc2")
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():
-        image = rospy.wait_for_message("camera/rgb/image_raw", Image)
-        red_mask = get_red_mask(image)
-        green_mask = get_green_mask(image)
-        mask = red_mask | green_mask
-        canvas = cv_bridge.CvBridge().imgmsg_to_cv2(image, desired_encoding="bgr8")
-        shapes, moments = detect_shape(mask, canvas)
-        avg_y_center = numpy.mean([int(M["m01"] / (M["m00"] + 1.5)) for M in moments])
-        big_shape_count = 0
-        for m in moments:
-            print("moment size:", m["m00"])
-            if m["m00"] > 2300:
-                big_shape_count += 1
-        cv2.imshow("window", canvas)
+        # image = rospy.wait_for_message("camera/rgb/image_raw", Image)
+        # red_mask = get_red_mask(image)
+        # green_mask = get_green_mask(image)
+        # mask = red_mask | green_mask
+        # canvas = cv_bridge.CvBridge().imgmsg_to_cv2(image, desired_encoding="bgr8")
+        # shapes, moments = detect_shape(mask, canvas)
+        # avg_y_center = numpy.mean([int(M["m01"] / (M["m00"] + 1.5)) for M in moments])
+        # big_shape_count = 0
+        # for m in moments:
+        #     # print("moment size:", m["m00"])
+        #     if m["m00"] > 2300:
+        #         big_shape_count += 1
+        # cv2.imshow("window", canvas)
+        # cv2.waitKey(3)
+        # print("len, avg y", big_shape_count, avg_y_center)
+
+        shape = detect_green_shape()
+        green_mask = get_green_mask()
+        cv2.imshow("green", green_mask)
         cv2.waitKey(3)
-        print("len, avg y", big_shape_count, avg_y_center)
+        print(shape.name)
         rate.sleep()

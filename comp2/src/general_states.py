@@ -68,7 +68,8 @@ class Driver(Drive):
         image_sub.unregister()
         return "exit"
 
-'''
+
+"""
 class LineStop(smach.State):
     def __init__(self, rate, pub_node, led_pub_nodes):
         smach.State.__init__(self, outcomes=["advance", "exit"])
@@ -88,7 +89,7 @@ class LineStop(smach.State):
         self.led_pubs[0].publish(led_msg)
 
         return "advance"
-'''
+"""
 
 
 class Advancer(Drive):
@@ -123,7 +124,7 @@ class Advancer(Drive):
 
 
 class AtLine(smach.State):
-    def __init__(self, rate):
+    def __init__(self, rate, light_pubs):
         smach.State.__init__(
             self,
             outcomes=[
@@ -137,6 +138,7 @@ class AtLine(smach.State):
         )
         self.rate = rate
         self.red_line_num = 0
+        self.light_pubs = light_pubs
 
         # IMPORTANT: These states currently assume that the red line at location2
         # is counted twice (for both directions)
@@ -157,6 +159,10 @@ class AtLine(smach.State):
     def execute(self, userdata):
         self.red_line_num += 1
         print("RED LINE NUMBER: ", self.red_line_num)
+        led_off_msg = Led()
+        led_off_msg.value = Led.BLACK
+        self.light_pubs[0].publish(led_off_msg)
+        self.light_pubs[1].publish(led_off_msg)
         return self.next_states[self.red_line_num]
 
 

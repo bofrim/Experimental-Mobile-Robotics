@@ -6,6 +6,8 @@ import smach, smach_ros
 from comp2.msg import Centroid
 from sensor_msgs.msg import Image
 
+from image_processing import hsv_bound, WHITE_UPPER, WHITE_LOWER
+
 
 class WhiteLineTracker:
     def __init__(self):
@@ -23,13 +25,11 @@ class WhiteLineTracker:
 
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        lower_white = numpy.array([0, 0, 170])
-        upper_white = numpy.array([255, 10, 255])
-        mask = cv2.inRange(hsv, lower_white, upper_white)
+        mask = hsv_bound(hsv, WHITE_UPPER, WHITE_LOWER, denoise=2, fill=6)
 
         h, w, d = image.shape
-        search_top = h * 0.85
-        search_bot = search_top + 50
+        search_top = h * 0.7
+        search_bot = search_top + 110
         mask[0:search_top, 0:w] = 0
         mask[search_bot:h, 0:w] = 0
         M = cv2.moments(mask)

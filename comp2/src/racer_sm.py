@@ -13,7 +13,7 @@ from location2 import (
     Turn180,
     TurnLeft2End,
 )
-from location3 import AdjustmentTurn3, TurnLeft3, Detect3
+from location3 import AdjustmentTurn3, TurnLeft3, Detect3, TurnRight3
 
 from general_states import Driver, Advancer, AtLine, TurnRight
 from geometry_msgs.msg import Twist
@@ -138,7 +138,13 @@ def main():
         smach.StateMachine.add(
             "DETECT3",
             Detect3(rate, light_pubs),
-            transitions={"turn_right": "TURN_RIGHT", "exit": "exit"},
+            transitions={"turn_right3": "TURN_RIGHT3", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "TURN_RIGHT3",
+            TurnRight3(rate, cmd_vel_pub),
+            transitions={"drive": "DRIVE", "exit": "exit"},
         )
 
     state_machine.execute()

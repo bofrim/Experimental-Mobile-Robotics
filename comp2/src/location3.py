@@ -35,7 +35,7 @@ class AdjustmentTurn3(smach.State):
 
 class Detect3(smach.State):
     def __init__(self, rate, light_pubs):
-        smach.State.__init__(self, outcomes=["turn_right", "exit"])
+        smach.State.__init__(self, outcomes=["turn_right3", "exit"])
         self.rate = rate
         self.light_pubs = light_pubs
 
@@ -66,4 +66,15 @@ class Detect3(smach.State):
             self.light_pubs[0].publish(led_msg)
             self.light_pubs[1].publish(led_msg)
 
-        return "turn_right"
+        return "turn_right3"
+
+
+class TurnRight3(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["drive", "exit"])
+        self.rate = rate
+        self.vel_pub = pub_node
+
+    def execute(self, userdata):
+        simple_turn(-63, self.vel_pub)
+        return "drive"

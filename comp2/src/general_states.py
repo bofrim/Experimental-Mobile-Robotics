@@ -8,6 +8,7 @@ from kobuki_msgs.msg import Led
 from operations import simple_turn
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
+from comp2.msg import Centroid
 from time import time
 from image_processing import get_white_mask, crop, path_mass_center
 
@@ -25,7 +26,7 @@ class Drive(smach.State):
         self.stop_distance = msg.data
 
     def image_callback(self, msg):
-        curr_err = msg.cx - w / 2
+        curr_err = msg.err
 
         delta_err = curr_err - self.prev_err
         self.twist.linear.x = 0.4

@@ -40,6 +40,8 @@ class WhiteLineTracker:
             centroid_msg = Centroid()
             centroid_msg.cx = cx
             centroid_msg.cy = cy
+            centroid_msg.err = cx - w / 2
+
             self.centroid_pub.publish(centroid_msg)
 
         cv2.imshow("window", mask)

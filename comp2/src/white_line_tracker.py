@@ -23,13 +23,13 @@ class WhiteLineTracker:
 
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        lower_white = numpy.array([0, 0, 170])
-        upper_white = numpy.array([255, 10, 255])
+        lower_white = numpy.array([0, 0, 190])
+        upper_white = numpy.array([360, 10, 255])
         mask = cv2.inRange(hsv, lower_white, upper_white)
 
         h, w, d = image.shape
-        search_top = h * 0.85
-        search_bot = search_top + 50
+        search_top = h * 0.80
+        search_bot = search_top + 60
         mask[0:search_top, 0:w] = 0
         mask[search_bot:h, 0:w] = 0
         M = cv2.moments(mask)

@@ -103,7 +103,7 @@ class Advancer(Drive):
         red_line_sub = rospy.Subscriber(
             "red_line_distance", Centroid, self.red_line_callback
         )
-        for _ in range(0, 15):
+        for _ in range(0, 20):
             twist = Twist()
 
             curr_err = self.stop_centroid.err

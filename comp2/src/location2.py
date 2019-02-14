@@ -82,9 +82,12 @@ class DriveToObjects(Drive):
                         prev_shape = shape
                         shape_count = 0
 
-                    if shape_count > 6:
+                    if shape_count > 8:
+                        print("discovered with a sequence")
                         break
                 else:
+                    print("discovered with accumulation")
+                    print(shape_totals)
                     shape = max(shape_totals, key=shape_totals.get)
                     self.rate.sleep()
 
@@ -145,8 +148,8 @@ class DriveFromObjects(Drive):
             delta_err = curr_err - prev_err
 
             if self.path_centroid.cx == -1 or self.path_centroid.cy == -1:
-                twist_msg.linear.x = 0.1
-                twist_msg.angular.z = -0.3
+                twist_msg.linear.x = 0.075
+                twist_msg.angular.z = -0.2
             else:
                 twist_msg.linear.x = 0.25
                 twist_msg.angular.z = (-float(curr_err) / 200) + (

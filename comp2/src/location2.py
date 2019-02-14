@@ -2,6 +2,7 @@
 import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 
+from operations import simple_turn
 from geometry_msgs.msg import Twist
 
 class TurnLeft2Start(smach.State):
@@ -12,6 +13,7 @@ class TurnLeft2Start(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
+        simple_turn(90, self.vel_pub)
         return "drive_to_objects"
 
 
@@ -30,7 +32,7 @@ class Detect2(smach.State):
         smach.State.__init__(self, outcomes=["turn_180", "exit"])
         self.bridge = cv_bridge.CvBridge()
         self.rate = rate
-        
+
     def execute(self, userdata):
         return "turn_180"
 
@@ -43,7 +45,8 @@ class Turn180(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        return "drive"     
+        simple_turn(180, self.vel_pub)
+        return "drive"   
 
 
 class TurnLeft2End(smach.State):
@@ -54,4 +57,5 @@ class TurnLeft2End(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
+        simple_turn(90, self.vel_pub)
         return "drive"

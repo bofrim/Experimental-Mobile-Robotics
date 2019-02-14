@@ -2,6 +2,7 @@
 import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 
+from operations import simple_turn
 from geometry_msgs.msg import Twist
 
 class TurnLeft3(smach.State):
@@ -11,6 +12,7 @@ class TurnLeft3(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
+        simple_turn(90, self.vel_pub)
         return "detect3"
 
 

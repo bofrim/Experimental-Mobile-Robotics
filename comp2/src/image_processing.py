@@ -29,15 +29,10 @@ RED_UPPER = [20, 255, 255]
 RED_LOWER = [317, 180, 80]
 GREEN_UPPER = [176, 255, 255]
 GREEN_LOWER = [100, 84, 58]
-<<<<<<< HEAD
-WHITE_UPPER = [360, 16, 255]
-WHITE_LOWER = [0, 0, 200]
-=======
 GREEN_UPPER_180 = [75, 255, 255]
 GREEN_LOWER_180 = [45, 84, 58]
 WHITE_UPPER = [255, 10, 255]
 WHITE_LOWER = [0, 0, 170]
->>>>>>> @{-1}
 
 
 def threshold_hsv_360(hsv, h_max, h_min, s_max, s_min, v_max, v_min, denoise=0, fill=0):

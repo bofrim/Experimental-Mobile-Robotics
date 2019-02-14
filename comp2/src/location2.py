@@ -79,12 +79,16 @@ class DriveToObjects(Drive):
                         prev_shape = shape
                         shape_count = 0
 
-                    if shape_count > 5:
+                    if shape_count > 8:
                         break
+                        
+                    # self.rate.sleep()
+
+                    #Possibly add timeout - which sets triangle ;)
 
                 # Maybe center the shapes
                 ("SAW IMAGES")
-                thprinte_shape = shape
+                the_shape = shape
                 print("The shape is: ", the_shape.name)
                 # Show the count
                 led_on_msg = Led()

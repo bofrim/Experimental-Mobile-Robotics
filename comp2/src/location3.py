@@ -40,7 +40,7 @@ class AdjustmentTurn3(smach.State):
 
 class Detect3(smach.State):
     def __init__(self, rate, light_pubs, sound_pub):
-        smach.State.__init__(self, outcomes=["turn_right", "exit"])
+        smach.State.__init__(self, outcomes=["turn_right3", "exit"])
         self.rate = rate
         self.light_pubs = light_pubs
         self.sound_pub = sound_pub

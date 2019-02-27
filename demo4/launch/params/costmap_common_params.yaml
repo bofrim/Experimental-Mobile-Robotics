@@ -1,0 +1,11 @@
+# Code from: http://wiki.ros.org/navigation/Tutorials/RobotSetup
+# More info on 2D costmaps: http://wiki.ros.org/costmap_2d
+obstacle_range: 2.5
+raytrace_range: 3.0
+footprint: [[0.20, 0.20], [-0.20, 0.20], [-0.20, -0.20], [0.20, -0.20]]
+#robot_radius: ir_of_robot
+inflation_radius: 0.55
+
+observation_sources: laser_scan_sensor 
+# sensor_frame value is based on the "output_frame_id" from 3dsensor.launch -> confirmed from the header info in 'rostopic echo /scan'
+laser_scan_sensor: {sensor_frame: camera_depth_frame, data_type: LaserScan, topic: /scan, marking: false, clearing: false}

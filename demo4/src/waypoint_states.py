@@ -6,6 +6,9 @@ import smach_ros
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 
+button_waypoint_map = {
+    "X": (0, 0), "A": (1, 0), "B": (2, 0), "Y": (3, 0)
+}
 
 
 class InitWaypoints(smach.State):
@@ -34,13 +37,13 @@ class InitWaypoints(smach.State):
     def joy_callback(self, msg):
         # Buttons based on Controller "D" Mode
         if msg.buttons[0]:          #X
-            self.positions.append((0,0))
+            self.positions.append(button_waypoint_map["X"])
         elif msg.buttons[1]:        #A
-            self.positions.append((1,0))
+            self.positions.append(button_waypoint_map["A"])
         elif msg.buttons[2]:        #B
-            self.positions.append((2,0))
+            self.positions.append(button_waypoint_map["B"])
         elif msg.buttons[3]:        #Y
-            self.positions.append((3,0))
+            self.positions.append(button_waypoint_map["Y"])
         elif msg.buttons[8]:        #Back
             self.positions = []
 
@@ -60,19 +63,24 @@ class Drive(smach.State):
         if not self.positions:
             self.positions = userdata.positions
             print self.positions
+        
+        goal_position = self.positions[self.curr_destination]
+        self.curr_destination += 1
 
-        # Pseudo code
-        # while not rospy.is_shutdown:
-            # if at destination:
-            #    if self.curr_destination == 3:
-            #       return "exit" 
-            #    self.curr_destination += 1
-            #    return "stop"
-            #
-            # else
-            #    use acml and position[curr_destination] to 
-            #       figure out twist message
-            #    self.publish(twist)
+        # Create action lib object
+        # Create the goal message
+        # Set the goal frame id to global
+        # Set the goal stamp to <something>.now()
+        # Set the goal x position
+        # Set the goal y position
+        # Maybe set the goal orientation
+        # <Action lib>.send goal (goal)
+        # <Action lib>.wait for result ()
+        # Check the value of: <Action lib>. get state ()
+
+        # if curr destination  == len(positions)
+        #     return exit
+        # return stop
             
       
         #return "exit"

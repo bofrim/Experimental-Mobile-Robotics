@@ -1,0 +1,20 @@
+<launch>
+    <!-- Original code from http://wiki.ros.org/navigation/Tutorials/RobotSetup -->
+
+    <arg name="map_file" default="$(find demo4)/data/map.yaml"/>
+
+    <master auto="start"/>
+    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)"/>
+
+    <!--- Run AMCL --> 
+    <include file="$(find amcl)/examples/amcl_diff.launch" />
+
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <rosparam file="$(find demo4)/launch/params/costmap_common_params.yaml" command="load" ns="global_costmap" /> 
+        <rosparam file="$(find demo4)/launch/params/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find demo4)/launch/params/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find demo4)/launch/params/global_costmap_params.yaml" command="load" /> 
+        <rosparam file="$(find demo4)/launch/params/base_local_planner_params.yaml" command="load" />
+    </node>
+
+</launch>

@@ -1,7 +1,8 @@
 <launch>
     <!-- Original code from http://wiki.ros.org/navigation/Tutorials/RobotSetup -->
-
     <arg name="map_file" default="$(find demo4)/data/lab_room_map.yaml"/>
+
+    <remap from="cmd_vel" to="cmd_vel_mux/input/teleop"/>
 
     <master auto="start"/>
     <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)"/>
@@ -16,7 +17,5 @@
         <rosparam file="$(find demo4)/launch/params/global_costmap_params.yaml" command="load" /> 
         <rosparam file="$(find demo4)/launch/params/base_local_planner_params.yaml" command="load" />
     </node>
-
-    <remap from="cmd_vel" to="cmd_vel/input/teleop"/>
 
 </launch>

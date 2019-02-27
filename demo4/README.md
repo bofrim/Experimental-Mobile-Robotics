@@ -1,7 +1,7 @@
 # Demo 4
 
 ## Running Physical Navigation
-Order is important: \[optional]
+Order is important:
 - `roslaunch demo4 waypoint_config.launch`
 - `roslaunch demo4 nav_stack.launch [map_file]`
 - `rviz` -> Open config: NaigationStackRviz.rviz

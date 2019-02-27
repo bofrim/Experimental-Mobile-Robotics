@@ -1,0 +1,4 @@
+<launch>
+    <arg name="bag_path"/>
+    <node pkg="rosbag" type="play" name="bag_data" args="--clock $(arg bag_path)" output="screen"/>
+</launch>

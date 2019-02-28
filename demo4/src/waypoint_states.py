@@ -4,16 +4,16 @@ import smach
 import smach_ros
 import actionlib
 
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, Quaternion
 from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led
 
 BUTTON_WAYPOINT_MAP = {
-    "X": Point(4.014, -1.205, 0.010),
-    "A": Point(2.065, -2.475, 0.010),
-    "B": Point(1.702, -4.093, 0.010),
-    "Y": Point(3.354, -3.299, 0.010),
+    "X": (Point(4.183, -1.455, 0.010), Quaternion(0.000, 0.000, 0.959, -0.282)),
+    "A": (Point(1.987, -2.264, 0.010), Quaternion(0.000, 0.000, -0.504, 0.864)),
+    "B": (Point(1.623, -3.766, 0.010), Quaternion(0.000, 0.000, 0.242, 0.970)),
+    "Y": (Point(3.457, -3.328, 0.010), Quaternion(0.000, 0.000, 0.509, 0.861)),
 }
 
 
@@ -110,8 +110,8 @@ class Drive(smach.State):
         client.wait_for_server()
         goal_pose = MoveBaseGoal()
         goal_pose.target_pose.header.frame_id = 'map'
-        goal_pose.target_pose.pose.position = self.positions[self.destination_index]
-        goal_pose.target_pose.pose.orientation.w = 1
+        goal_pose.target_pose.pose.position = self.positions[self.destination_index][0]
+        goal_pose.target_pose.pose.orientation = self.positions[self.destination_index][1]
         client.send_goal(goal_pose)
         client.wait_for_result()
         self.destination_index += 1

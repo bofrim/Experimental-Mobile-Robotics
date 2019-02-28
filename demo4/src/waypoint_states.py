@@ -10,7 +10,10 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led
 
 BUTTON_WAYPOINT_MAP = {
-    "X": Point(4.06, -1.47, 0), "A": Point(2.11, 1.86, 0), "B": Point(1.52, -3.61, 0), "Y": Point(3.23, -3.26, 0)
+    "X": Point(4.014, -1.205, 0.010),
+    "A": Point(2.065, -2.475, 0.010),
+    "B": Point(1.702, -4.093, 0.010),
+    "Y": Point(3.354, -3.299, 0.010),
 }
 
 
@@ -80,6 +83,11 @@ class Drive(smach.State):
         self.pub_node = pub_node
         self.positions = []
         self.destination_index = 0
+        self.light_bit_1 = rospy.Publisher("/mobile_base/commands/led1", Led, queue_size=1)
+        self.light_bit_0 = rospy.Publisher("/mobile_base/commands/led2", Led, queue_size=1)
+        self.light_off = Led(Led.BLACK)
+        self.light_on = Led(Led.RED)
+        self.light_done = Led(Led.GREEN)
 
     def execute(self, userdata):
         """Send a goal to the goal server and wait until we get there.
@@ -88,6 +96,15 @@ class Drive(smach.State):
         """
         if not self.positions:
             self.positions = userdata.positions
+            
+        if self.destination_index & 0x01:
+            self.light_bit_0.publish(self.light_on)
+        else:
+            self.light_bit_0.publish(self.light_off)
+        if self.destination_index & 0x02:
+            self.light_bit_1.publish(self.light_on)
+        else:
+            self.light_bit_1.publish(self.light_off)
 
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         client.wait_for_server()
@@ -99,6 +116,8 @@ class Drive(smach.State):
         client.wait_for_result()
         self.destination_index += 1
         if self.destination_index == len(self.positions):
+            self.light_bit_0.publish(self.light_done)
+            self.light_bit_1.publish(self.light_done)
             return "exit"
         return "stop"
       
@@ -111,5 +130,5 @@ class Stop(smach.State):
         self.pub_node = pub_node
 
     def execute(self, userdata):
-        rospy.sleep(3)
+        rospy.sleep(1)
         return "drive"

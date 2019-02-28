@@ -4,8 +4,11 @@
     <include file="$(find turtlebot_bringup)/launch/minimal.launch"/>
     <include file="$(find turtlebot_navigation)/launch/amcl_demo.launch">
         <arg name="map_file" value="$(arg map_path)"/>
+        <arg name="custom_param_file" value="$(find demo4)/param/nav_params.yaml"/>
     </include>
     <include file="$(find turtlebot_teleop)/launch/logitech.launch"/>
     <include file="$(find turtlebot_rviz_launchers)/launch/view_navigation.launch"/>
     <node name="waypoint_sm" pkg="demo4" type="waypoint_main.py" if="$(arg run_nav)"/>
+    <param name="/move_base/global_costmap/inflation_layer/inflation_radius" value="0.07"/>
+    <param name="/move_base/local_costmap/inflation_layer/inflation_radius" value="0.07"/>
 </launch>

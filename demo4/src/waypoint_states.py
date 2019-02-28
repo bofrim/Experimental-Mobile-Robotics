@@ -2,12 +2,15 @@
 import rospy
 import smach
 import smach_ros
+import actionlib
 
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Point
 from sensor_msgs.msg import Joy
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from kobuki_msgs.msg import Led
 
-button_waypoint_map = {
-    "X": (0, 0), "A": (1, 0), "B": (2, 0), "Y": (3, 0)
+BUTTON_WAYPOINT_MAP = {
+    "X": Point(4.06, -1.47, 0), "A": Point(2.11, 1.86, 0), "B": Point(1.52, -3.61, 0), "Y": Point(3.23, -3.26, 0)
 }
 
 
@@ -22,10 +25,26 @@ class InitWaypoints(smach.State):
         joy_sub = rospy.Subscriber(
             "joy", Joy, self.joy_callback, queue_size=1
         )
+        light_bit_1 = rospy.Publisher("/mobile_base/commands/led1", Led, queue_size=1)
+        light_bit_0 = rospy.Publisher("/mobile_base/commands/led2", Led, queue_size=1)
+        light_off = Led(Led.BLACK)
+        light_on = Led(Led.ORANGE)
+        light_done = Led(Led.GREEN)
         while not rospy.is_shutdown():
             self.rate.sleep()
 
+            if len(self.positions) & 0x01:
+                light_bit_0.publish(light_on)
+            else:
+                light_bit_0.publish(light_off)
+            if len(self.positions) & 0x02:
+                light_bit_1.publish(light_on)
+            else:
+                light_bit_1.publish(light_off)
+
             if len(self.positions) == 4:
+                light_bit_0.publish(light_done)
+                light_bit_1.publish(light_done)
                 userdata.positions = self.positions
                 joy_sub.unregister()
                 return "drive"
@@ -37,17 +56,20 @@ class InitWaypoints(smach.State):
     def joy_callback(self, msg):
         # Buttons based on Controller "D" Mode
         if msg.buttons[0]:          #X
-            self.positions.append(button_waypoint_map["X"])
+            self.positions.append(BUTTON_WAYPOINT_MAP["X"])
+            print("X")
         elif msg.buttons[1]:        #A
-            self.positions.append(button_waypoint_map["A"])
+            self.positions.append(BUTTON_WAYPOINT_MAP["A"])
+            print("A")
         elif msg.buttons[2]:        #B
-            self.positions.append(button_waypoint_map["B"])
+            self.positions.append(BUTTON_WAYPOINT_MAP["B"])
+            print("B")
         elif msg.buttons[3]:        #Y
-            self.positions.append(button_waypoint_map["Y"])
+            self.positions.append(BUTTON_WAYPOINT_MAP["Y"])
+            print("Y")
         elif msg.buttons[8]:        #Back
             self.positions = []
-
-        print msg.buttons
+            print("back")
 
 
 class Drive(smach.State):
@@ -57,37 +79,29 @@ class Drive(smach.State):
         self.rate = rate
         self.pub_node = pub_node
         self.positions = []
-        self.curr_destination = 0
+        self.destination_index = 0
 
     def execute(self, userdata):
+        """Send a goal to the goal server and wait until we get there.
+        
+        Go to the stop state if there are still positions left, otherwise exit.
+        """
         if not self.positions:
             self.positions = userdata.positions
-            print self.positions
-        
-        goal_position = self.positions[self.curr_destination]
-        self.curr_destination += 1
 
-        # Create action lib object
-        # Create the goal message
-        # Set the goal frame id to global
-        # Set the goal stamp to <something>.now()
-        # Set the goal x position
-        # Set the goal y position
-        # Maybe set the goal orientation
-        # <Action lib>.send goal (goal)
-        # <Action lib>.wait for result ()
-        # Check the value of: <Action lib>. get state ()
-
-        # if curr destination  == len(positions)
-        #     return exit
-        # return stop
-            
-      
-        #return "exit"
-        if self.curr_destination == 3:
-            return "exit" 
-        self.curr_destination += 1
+        client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        client.wait_for_server()
+        goal_pose = MoveBaseGoal()
+        goal_pose.target_pose.header.frame_id = 'map'
+        goal_pose.target_pose.pose.position = self.positions[self.destination_index]
+        goal_pose.target_pose.pose.orientation.w = 1
+        client.send_goal(goal_pose)
+        client.wait_for_result()
+        self.destination_index += 1
+        if self.destination_index == len(self.positions):
+            return "exit"
         return "stop"
+      
 
 
 class Stop(smach.State):
@@ -98,5 +112,4 @@ class Stop(smach.State):
 
     def execute(self, userdata):
         rospy.sleep(3)
-
         return "drive"

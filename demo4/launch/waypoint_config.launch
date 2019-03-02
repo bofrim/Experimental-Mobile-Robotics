@@ -1,0 +1,9 @@
+<launch>
+    <include file="$(find turtlebot_bringup)/launch/minimal.launch"/>
+
+    <include file="$(find turtlebot_bringup)/launch/3dsensor.launch">    
+        <arg name="publish_tf" value="false"/>
+    </include>
+
+
+</launch>

@@ -14,9 +14,9 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led
 
 BUTTON_WAYPOINT_MAP = OrderedDict([
-    ("B", (Point(1.623, -3.766, 0.010), Quaternion(0.000, 0.000, 0.242, 0.970))),
-    ("Y", (Point(3.457, -3.328, 0.010), Quaternion(0.000, 0.000, 0.509, 0.861))),
-    ("X", (Point(4.183, -1.455, 0.010), Quaternion(0.000, 0.000, 0.959, -0.282)))
+    ("B", (Point(-0.392, 1.016, 0.010), Quaternion(0.000, 0.000, 1.000, 0.014))),
+    ("Y", (Point(-0.310, -0.917, 0.010), Quaternion(0.000, 0.000, 0.999, 0.046))),
+    ("X", (Point(1.060, -1.197, 0.010), Quaternion(0.000, 0.000, -0.699, 0.715)))
 ])
 
 

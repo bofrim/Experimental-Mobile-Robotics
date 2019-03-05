@@ -3,13 +3,4 @@
     <include file="$(find turtlebot_stage)/launch/turtlebot_in_stage.launch"/>
     <node pkg="rosbag" type="record" name="rosbag_record_cam" args="record -O $(find demo4)/data/$(arg bag_name) /scan /tf"/>
     <include file="$(find turtlebot_teleop)/launch/keyboard_teleop.launch"/>
-    <rosparam>
-        /slam_gmapping/angularUpdate: 0.1
-        /slam_gmapping/linearUpdate: 0.1
-        /slam_gmapping/lskip: 10
-        /slam_gmapping/xmax: 10
-        /slam_gmapping/xmin: -10
-        /slam_gmapping/ymax: 10
-        /slam_gmapping/ymin: -10
-    </rosparam>
 </launch>

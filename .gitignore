@@ -173,3 +173,6 @@ CATKIN_IGNORE
 
 
 *.vscode*
+
+# Local Directory stuff
+demo5part1/

@@ -1,0 +1,17 @@
+<launch>
+    <rosparam>
+        use_sim_time: true
+    </rosparam>
+    <node pkg="gmapping" type="slam_gmapping" name="slam_gmap"/>
+    <rosparam>
+        /slam_gmapping/angularUpdate: 0.1
+        /slam_gmapping/linearUpdate: 0.1
+        /slam_gmapping/lskip: 1
+        /slam_gmapping/xmax: 10
+        /slam_gmapping/xmin: -10
+        /slam_gmapping/ymax: 10
+        /slam_gmapping/ymin: -10
+        /slam_gmapping/map_update_interval: 4.0
+        /slam_gmapping/minimumScore: 50
+    </rosparam>
+</launch>

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+import actionlib
 import rospy
 import smach
 import smach_ros
-import actionlib
+import time
 
 from collections import OrderedDict
 
@@ -13,9 +14,9 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led
 
 BUTTON_WAYPOINT_MAP = OrderedDict([
-    ("X": (Point(4.183, -1.455, 0.010), Quaternion(0.000, 0.000, 0.959, -0.282))),
-    ("B": (Point(1.623, -3.766, 0.010), Quaternion(0.000, 0.000, 0.242, 0.970))),
-    ("Y": (Point(3.457, -3.328, 0.010), Quaternion(0.000, 0.000, 0.509, 0.861))),
+    ("B", (Point(1.623, -3.766, 0.010), Quaternion(0.000, 0.000, 0.242, 0.970))),
+    ("Y", (Point(3.457, -3.328, 0.010), Quaternion(0.000, 0.000, 0.509, 0.861))),
+    ("X", (Point(4.183, -1.455, 0.010), Quaternion(0.000, 0.000, 0.959, -0.282)))
 ])
 
 
@@ -79,7 +80,7 @@ class InitWaypoints(smach.State):
 
 class Drive(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["stop", "exit"],
+        smach.State.__init__(self, outcomes=["approach", "exit"],
                                    input_keys=["positions"])
         self.rate = rate
         self.pub_node = pub_node
@@ -140,7 +141,8 @@ class Approach(smach.State):
         ar_sub = rospy.Subscriber(
             "ar_pose_marker", AlvarMarker, self.ar_callback, queue_size=1
         )
-        while not ropsy.is_shutdown:
+        start = time.time()
+        while (time.time() - start < 5):
             if self.target_pose:
                 print self.target_pose
                 ar_sub.unregister()
@@ -160,5 +162,5 @@ class Stop(smach.State):
         self.pub_node = pub_node
 
     def execute(self, userdata):
-        rospy.sleep(2)
+        rospy.sleep(1)
         return "drive"

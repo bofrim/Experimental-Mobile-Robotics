@@ -5,11 +5,11 @@ import smach_ros
 
 from geometry_msgs.msg import Twist
 
-from waypoint_states import InitWaypoints, Drive, Approach, Stop
+from ar_states import InitWaypoints, Drive, Approach, Stop
 
 
 def main():
-    rospy.init_node("waypoint_navigation")
+    rospy.init_node("ar_navigation")
 
     state_machine = smach.StateMachine(outcomes=["complete", "exit"])
     state_introspection_server = smach_ros.IntrospectionServer(

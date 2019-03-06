@@ -5,6 +5,8 @@ import smach_ros
 
 from geometry_msgs.msg import Twist
 
+from ar_states import DriveToStart, Survey, Approach, Stop
+
 def main():
     rospy.init_node("ar_navigation")
 
@@ -27,7 +29,7 @@ def main():
         smach.StateMachine.add(
             "SURVEY",
             Survey(rate, cmd_vel_pub),
-            transitions={"approach": "APPROACH", "exit": "exit"}
+            transitions={"approach": "APPROACH"}
         )
 
         smach.StateMachine.add(

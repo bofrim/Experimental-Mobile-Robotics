@@ -29,15 +29,15 @@ class DriveToStart(smach.State):
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         client.wait_for_server()
 
-        client.send_goal(self.start_pose))
+        client.send_goal(self.start_pose)
         client.wait_for_result()
         
         return "survey"
 
 
 class Survey(smach.State):
-    def __init__(self, rate, pub_node, ar_sub_node):
-        smach.State.__init__(self, outcomes=["approach"]
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["approach"],
                                    output_keys=["target_marker"])
         self.pub_node = pub_node
         self.target_marker = None
@@ -67,7 +67,7 @@ class Survey(smach.State):
 
 class Approach(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["stop"]
+        smach.State.__init__(self, outcomes=["stop"],
                                    output_keys=["target_marker"])
         self.pub_node = pub_node
         self.target_marker = None
@@ -91,14 +91,14 @@ class Approach(smach.State):
         ar_sub.unregister()
         return "stop"
     
-    def ar_callback
+    def ar_callback(self, msg):
+        self.target_marker = msg
 
 
 class Stop(smach.State):
     def __init__(self, rate):
         smach.State.__init__(self, outcomes=["drive_to_start"])
         self.rate = rate
-        self.pub_node = pub_node
 
     def execute(self, userdata):
         rospy.sleep(1)

@@ -13,7 +13,7 @@ from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led
 
-START_POSITION = (Point(0.075, -0.025, 0.010), Quaternion(0.000, 0.000, -0.029, 1.000))
+START_POSITION = (Point(0.000, 0.000, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
 TAGS_VISITED = set()
 
 class DriveToStart(smach.State):
@@ -23,7 +23,7 @@ class DriveToStart(smach.State):
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.client.wait_for_server()
         self.start_pose = MoveBaseGoal()
-        self.start_pose.target_pose.header.frame_id = 'map'
+        self.start_pose.target_pose.header.frame_id = 'odom'
         self.start_pose.target_pose.pose.position = START_POSITION[0]
         self.start_pose.target_pose.pose.orientation = START_POSITION[1]
 
@@ -48,7 +48,7 @@ class Survey(smach.State):
             "/ar_pose_marker", AlvarMarkers, self.ar_callback, queue_size=1
         )
         
-        while True:
+        while not rospy.is_shutdown():
             if self.target_marker and -0.2 < self.target_marker.pose.pose.position.y and self.target_marker.pose.pose.position.y < 0.2:
                 userdata.target_marker = self.target_marker
                 ar_sub.unregister()

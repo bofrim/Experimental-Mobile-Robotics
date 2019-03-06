@@ -9,11 +9,7 @@
     <include file="$(find turtlebot_teleop)/launch/logitech.launch"/>
     <include file="$(find turtlebot_rviz_launchers)/launch/view_navigation.launch"/>
     <include file="$(find demo5)/launch/ar_track.launch"/>
-    <!--
-    <node name="waypoint_sm" pkg="demo5" type="waypoint_main.py" if="$(arg run_nav)"/>
-    -->
-    <node name="ar_navigation" pkg="demo5" type="ar_main.py" if="$(arg run_nav)"/>
-    <param name="/move_base/global_costmap/inflation_layer/inflation_radius" value="0.05"/>
-    <param name="/move_base/local_costmap/inflation_layer/inflation_radius" value="0.05"/>
-    <param name="/move_base/DWAPlannerROS/xy_goal_tolerance" value="0.25"/>
+    <node name="waypoint_sm" pkg="demo4" type="waypoint_main.py" if="$(arg run_nav)"/>
+    <param name="/move_base/global_costmap/inflation_layer/inflation_radius" value="0.07"/>
+    <param name="/move_base/local_costmap/inflation_layer/inflation_radius" value="0.07"/>
 </launch>

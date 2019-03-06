@@ -40,7 +40,7 @@ def main():
 
         smach.StateMachine.add(
             "STOP",
-            Stop(rate),
+            Stop(rate, cmd_vel_pub),
             transitions={"drive_to_start": "DRIVE_TO_START"}
         )
 

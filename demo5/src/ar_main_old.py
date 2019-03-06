@@ -5,7 +5,7 @@ import smach_ros
 
 from geometry_msgs.msg import Twist
 
-from ar_states import InitWaypoints, Drive, Approach, Stop
+from ar_states_old import InitWaypoints, Drive, Approach, Stop
 
 
 def main():

@@ -10,4 +10,9 @@
     <param name="/move_base/global_costmap/inflation_layer/inflation_radius" value="0.07"/>
     <param name="/move_base/local_costmap/inflation_layer/inflation_radius" value="0.07"/>
     -->
+    <!--
+    <node name="nav" pkg="demo5" type="ar_main.py">
+        <remap from="cmd_vel" to="cmd_vel_mux/input/teleop"/>
+    </node>
+    -->
 </launch>

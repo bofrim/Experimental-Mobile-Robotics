@@ -14,6 +14,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led
 
 START_POSITION = (Point(0.000, 0.000, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
+MARKER_POSE_TOPIC = "ar_pose_marker"
 TAGS_VISITED = set()
 
 class DriveToStart(smach.State):
@@ -44,8 +45,9 @@ class Survey(smach.State):
 
     def execute(self, userdata):
         self.target_marker = None
+        rate = rospy.Rate(10)
         ar_sub = rospy.Subscriber(
-            "/ar_pose_marker", AlvarMarkers, self.ar_callback, queue_size=1
+            MARKER_POSE_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
         
         while not rospy.is_shutdown():
@@ -55,10 +57,10 @@ class Survey(smach.State):
                 return "approach"
 
             twist_msg = Twist()
-            twist_msg.angular.z = 0.4
+            twist_msg.angular.z = 0.8
 
             self.pub_node.publish(twist_msg)
-            rospy.sleep(0.2)
+            rate.sleep()
 
     def ar_callback(self, msg):
         for marker in msg.markers:
@@ -75,30 +77,44 @@ class Approach(smach.State):
         self.pub_node = pub_node
         self.target_marker = None
         self.target_marker_id = None
+        self.target_marker_frame = None
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.client.wait_for_server()
 
     def execute(self, userdata):
         self.target_marker = userdata.target_marker
         self.target_marker_id = userdata.target_marker.id
+        self.target_marker_frame = "ar_marker_" + str(self.target_marker_id)
 
         ar_sub = rospy.Subscriber(
-            "/ar_pose_marker", AlvarMarkers, self.ar_callback, queue_size=1
+            MARKER_POSE_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
 
-        # Approach
-        while self.target_marker.pose.pose.position.x > 0.45:
+        print("Approach with cmd_vel")
+        while self.target_marker.pose.pose.position.x > 0.80 and not rospy.is_shutdown():
             direction = self.target_marker.pose.pose.position.y / abs(self.target_marker.pose.pose.position.y)
             msg = Twist()
             msg.angular.z = 0.2 * direction
             msg.linear.x = 0.2
-
             self.pub_node.publish(msg)
+            print("Distance = ", self.target_marker.pose.pose.position.x)
 
-        print self.target_marker.pose.pose.position.x
+        print("Approach with planner")
+        self.client.send_goal(self.calculate_target())
+        self.client.wait_for_result()
+
 
         TAGS_VISITED.add(self.target_marker_id)
         ar_sub.unregister()
         return "stop"
     
+    def calculate_target(self):
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = self.target_marker_frame
+        goal.target_pose.pose.position = Point(0.30, 0.0, 0.0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0.89399666, -0.44807362)
+        return goal
+        
     def ar_callback(self, msg):
         for marker in msg.markers:
             if marker.id == self.target_marker_id:

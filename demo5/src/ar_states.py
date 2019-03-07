@@ -41,7 +41,8 @@ class Survey(smach.State):
                                    output_keys=["target_marker"])
         self.pub_node = pub_node
         self.target_marker = None
-        self.sequential_target_count = 0
+        self.ar_focus_id = -1
+        self.target_repetitions = 0
 
     def execute(self, userdata):
         self.target_marker = None
@@ -51,25 +52,36 @@ class Survey(smach.State):
         )
         
         while not rospy.is_shutdown():
-            if self.target_marker and -0.2 < self.target_marker.pose.pose.position.y and self.target_marker.pose.pose.position.y < 0.2:
+
+            if self.target_marker and self.target_repetitions >= 3 and -0.3 < self.target_marker.pose.pose.position.y and self.target_marker.pose.pose.position.y < 0.3:
                 userdata.target_marker = self.target_marker
                 ar_sub.unregister()
                 return "approach"
 
             twist_msg = Twist()
-            twist_msg.angular.z = 0.8
+            twist_msg.angular.z = 0.4
 
             self.pub_node.publish(twist_msg)
             rate.sleep()
 
     def ar_callback(self, msg):
+        if not msg.markers:
+            self.ar_focus_id = -1
+            self.target_repetitions = 0
+            return 
+
         for marker in msg.markers:
+            if marker.id == self.ar_focus_id:
+                self.target_repetitions = self.target_repetitions + 1
+            else:
+                self.ar_focus_id = marker.id
+                self.target_repetitions = 0
+        
             if marker.id not in TAGS_VISITED:
                 self.target_marker = marker
+                break
 
                 
-
-
 class Approach(smach.State):
     def __init__(self, rate, pub_node):
         smach.State.__init__(self, outcomes=["stop"],

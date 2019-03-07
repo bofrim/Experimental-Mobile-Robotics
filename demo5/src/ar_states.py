@@ -59,7 +59,7 @@ class Survey(smach.State):
                 return "approach"
 
             twist_msg = Twist()
-            twist_msg.angular.z = 0.4
+            twist_msg.angular.z = 0.3
 
             self.pub_node.publish(twist_msg)
             rate.sleep()
@@ -123,8 +123,8 @@ class Approach(smach.State):
     def calculate_target(self):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = self.target_marker_frame
-        goal.target_pose.pose.position = Point(0.30, 0.0, 0.0)
-        goal.target_pose.pose.orientation = Quaternion(0, 0, 0.89399666, -0.44807362)
+        goal.target_pose.pose.position = Point(0.0, 0.0, 0.25)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0.84147098, 0.54030231)
         return goal
         
     def ar_callback(self, msg):
@@ -145,7 +145,6 @@ class Stop(smach.State):
         #Sometimes DriveToStart doesn't work -> Backing up to give it a better shot
         for i in range(0, 3):
             msg = Twist()
-            msg.linear.x = -0.2
             self.pub_node.publish(msg)
 
         return "drive_to_start"

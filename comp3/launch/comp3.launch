@@ -1,0 +1,26 @@
+<launch>
+    <arg name="video_device"/>
+
+    <include file="$(find turtlebot_bringup)/launch/minimal.launch"/>
+    <include file="$(find turtlebot_bringup)/launch/3dsensor.launch"/>
+    <node name="red_line_finder" pkg="comp3" type="red_line_finder.py"/>
+    <node name="white_line_finder" pkg="comp3" type="white_line_tracker.py" />
+
+    <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+        <param name="video_device" value="$(arg video_device)" />
+        <param name="image_width" value="640" />
+        <param name="image_height" value="480" />
+        <param name="pixel_format" value="yuyv" />
+        <param name="camera_frame_id" value="usb_cam" />
+        <param name="io_method" value="mmap"/>
+    </node>
+    <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
+        <remap from="image" to="/usb_cam/image_raw"/>
+        <param name="autosize" value="true" />
+    </node>
+    <!--
+    <node name="racer_sm" pkg="comp2" type="racer_sm.py">
+        <remap from="cmd_vel" to="cmd_vel_mux/input/teleop"/>
+    </node>
+    -->
+</launch>

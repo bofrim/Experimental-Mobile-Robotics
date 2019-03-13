@@ -225,13 +225,21 @@ class OnRamp(smach.State):
         self.client.wait_for_server()
         self.rate = rate
 
-    def execute(self, userdata):  
-        pose = MoveBaseGoal()
-        pose.target_pose.header.frame_id = 'map'
-        pose.target_pose.pose.position = WAYPOINT_MAP["on_ramp"][0]
-        pose.target_pose.pose.orientation = WAYPOINT_MAP["on_ramp"][1]
+    def execute(self, userdata):
+        pose_prepare = MoveBaseGoal()
+        pose_prepare.target_pose.header.frame_id = 'map'
+        pose_prepare.target_pose.pose.position = WAYPOINT_MAP["far"][0]
+        pose_prepare.target_pose.pose.orientation = WAYPOINT_MAP["far"][1]
 
-        self.client.send_goal(pose)
+        self.client.send_goal(pose_prepare)
+        self.client.wait_for_result()
+
+        pose_ramp = MoveBaseGoal()
+        pose_ramp.target_pose.header.frame_id = 'map'
+        pose_ramp.target_pose.pose.position = WAYPOINT_MAP["on_ramp"][0]
+        pose_ramp.target_pose.pose.orientation = WAYPOINT_MAP["on_ramp"][1]
+
+        self.client.send_goal(pose_ramp)
         self.client.wait_for_result()
 
         return "drive"

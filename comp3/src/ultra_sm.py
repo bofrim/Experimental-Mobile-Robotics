@@ -24,6 +24,10 @@ from time import time
 
 def main():
     rospy.init_node("ultra_state_machine")
+    if rospy.has_param("initial_line"):
+        initial_line = rospy.get_param("initial_line")
+    else:
+        initial_line = 0
 
     state_machine = smach.StateMachine(outcomes=["complete", "exit"])
     state_introspection_server = smach_ros.IntrospectionServer(
@@ -58,7 +62,7 @@ def main():
 
         smach.StateMachine.add(
             "AT_LINE",
-            AtLine(rate, light_pubs),
+            AtLine(rate, light_pubs, initial_line=initial_line),
             transitions={
                 "drive": "DRIVE",
                 "turn_left_1": "TURN_LEFT_1",
@@ -125,9 +129,7 @@ def main():
         )
 
         smach.StateMachine.add(
-            "OFF_RAMP",
-            OffRamp(rate, cmd_vel_pub),
-            transitions={"exit": "exit"},
+            "OFF_RAMP", OffRamp(rate, cmd_vel_pub), transitions={"exit": "exit"}
         )
 
         smach.StateMachine.add(

@@ -14,7 +14,7 @@ from location2 import (
     TurnLeft2End,
 )
 from location3 import TurnLeft3, Detect3, TurnRight3
-from location4 import DriverRamp
+from location4 import DriverRamp, DriveToStart, ArSurvey, ArApproach
 
 from general_states import Driver, Advancer, AtLine, TurnRight
 from geometry_msgs.msg import Twist
@@ -24,10 +24,13 @@ from time import time
 
 def main():
     rospy.init_node("ultra_state_machine")
-    if rospy.has_param("initial_line"):
-        initial_line = rospy.get_param("initial_line")
+    if rospy.has_param("~initial_line"):
+        initial_line = rospy.get_param("~initial_line")
     else:
         initial_line = 0
+
+    print initial_line
+    exit()
 
     state_machine = smach.StateMachine(outcomes=["complete", "exit"])
     state_introspection_server = smach_ros.IntrospectionServer(
@@ -131,6 +134,24 @@ def main():
         smach.StateMachine.add(
             "OFF_RAMP",
             DriverRamp(rate, cmd_vel_pub),
+            transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"},
+        )
+
+        smach.StateMachine.add (
+            "DRIVE_TO_START",
+            DriveToStart(rate, cmd_vel_pub),
+            transitions={"ar_survey": "AR_SURVEY"}
+        )
+
+        smach.StateMachine.add(
+            "AR_SURVEY",
+            ArSurvey(rate, cmd_vel_pub),
+            transitions={"ar_approach": "AR_APPROACH", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "AR_APPROACH",
+            ArApproach(rate, cmd_vel_pub),
             transitions={"exit": "exit"},
         )
 

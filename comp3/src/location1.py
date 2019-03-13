@@ -7,7 +7,9 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from kobuki_msgs.msg import Led, Sound
 
-from image_processing import get_red_mask, count_objects, detect_shape
+from image_processing import get_red_mask, count_objects, detect_shape, get_red_mask_image_det
+
+from utils import display_count
 
 
 class TurnLeft1(smach.State):
@@ -28,10 +30,9 @@ class TurnLeft1(smach.State):
 
 
 class Detect1(smach.State):
-    def __init__(self, rate, light_pubs, sound_pub):
+    def __init__(self, rate, sound_pub):
         smach.State.__init__(self, outcomes=["turn_right", "exit"])
         self.rate = rate
-        self.light_pubs = light_pubs
         self.sound_pub = sound_pub
 
     def execute(self, userdata):
@@ -39,26 +40,14 @@ class Detect1(smach.State):
         max_count = 0
         for _ in range(7):
             image = rospy.wait_for_message("camera/rgb/image_raw", Image)
-            red_mask = get_red_mask(image)
+            red_mask = get_red_mask_image_det(image)
             # canvas = cv_bridge.CvBridge().imgmsg_to_cv2(image, desired_encoding="bgr8")
             # shapes, moments = detect_shape(red_mask, canvas)
             count = count_objects(red_mask)
             max_count = max(count, max_count)
 
         # TODO: Show detection in lights
-        led_on_msg = Led()
-        led_on_msg.value = Led.ORANGE
-        led_off_msg = Led()
-        led_off_msg.value = Led.BLACK
-        if max_count & 0x01:
-            self.light_pubs[1].publish(led_on_msg)
-        else:
-            self.light_pubs[1].publish(led_off_msg)
-
-        if max_count & 0x02:
-            self.light_pubs[0].publish(led_on_msg)
-        else:
-            self.light_pubs[0].publish(led_off_msg)
+        display_count(max_count)
 
         sound_msg = Sound()
         sound_msg.value = Sound.ON
@@ -78,7 +67,7 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         print("Wait for image")
         image = rospy.wait_for_message("camera/rgb/image_raw", Image)
-        red_mask = get_red_mask(image)
+        red_mask = get_red_mask_image_det(image)
         canvas = cv_bridge.CvBridge().imgmsg_to_cv2(image, desired_encoding="bgr8")
         shapes, moments = detect_shape(red_mask, canvas)
         count_objects(red_mask)

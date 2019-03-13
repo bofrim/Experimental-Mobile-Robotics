@@ -13,6 +13,7 @@ from general_states import Drive
 
 from image_processing import (
     get_red_mask,
+    get_red_mask_image_det,
     get_green_mask,
     detect_shape,
     detect_green_shape,
@@ -118,7 +119,7 @@ class Detect2(smach.State):
         # OLD START
         while not rospy.is_shutdown():
             image = rospy.wait_for_message("camera/rgb/image_raw", Image)
-            red_mask = get_red_mask(image)
+            red_mask = get_red_mask_image_det(image)
             green_mask = get_green_mask(image)
             shape_mask = red_mask | green_mask
 

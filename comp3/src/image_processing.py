@@ -14,9 +14,10 @@ class Shapes(Enum):
     pentagon = 5
     circle = 9
 
-
-RED_UPPER = [5, 255, 255]
-RED_LOWER = [335, 185, 50]
+RED_UPPER=[20, 255, 255]
+RED_LOWER=[317, 80, 80]
+RED_UPPER_IMG = [10, 255, 255]
+RED_LOWER_IMG = [335, 185, 50]
 GREEN_UPPER_180 = [75, 255, 255]
 GREEN_LOWER_180 = [48, 65, 101]
 WHITE_UPPER = [255, 10, 255]
@@ -65,7 +66,7 @@ def hsv_bound(image, upper_bound, lower_bound, denoise=0, fill=0):
 def detect_shape(mask, canvas=None, threshold=100):
     """Detect a shape contained in an image.
     
-    Adappted from: https://stackoverflow.com/questions/11424002/how-to-detect-simple-geometric-shapes-using-opencv
+    Adapted from: https://stackoverflow.com/questions/11424002/how-to-detect-simple-geometric-shapes-using-opencv
     """
     detected_shapes = []
     moments = []
@@ -116,6 +117,26 @@ def lowest_object_coord(mask, threshold=100):
             lowest_coord = (x, y)
     return lowest_coord
 
+def count_objects(mask, threshold=1000, canvas=None):
+    """Count the number of distinct objects in the boolean image."""
+    _, contours, _ = cv2.findContours(mask, 1, 2)
+    moments = [cv2.moments(cont) for cont in contours]
+    big_moments = [m for m in moments if m["m00"] > threshold]
+    if canvas != None:
+        for moment in big_moments:
+            cx = int(moment["m10"] / moment["m00"])
+            cy = int(moment["m01"] / moment["m00"])
+            cv2.circle(canvas, (cx, cy), 20, (0, 0, 255), -1)
+    return len(big_moments)
+
+def detect_green_shape(image=None):
+    mask = get_green_mask(image)
+    shapes, moments = detect_shape(mask)
+    if len(shapes) == 1:
+        return shapes[0]
+
+    return Shapes.unknown
+
 
 def right_most_object_coord(mask, threshold=100):
     """Find the coordinates for the right most object in the mask."""
@@ -128,7 +149,7 @@ def right_most_object_coord(mask, threshold=100):
         if x > right_most_x:
             right_most_x = x
             right_most_coord = (x, y)
-    return right_most_coor
+    return right_most_coord
 
 
 def get_hsv_image(image=None):
@@ -142,6 +163,8 @@ def get_hsv_image(image=None):
 def get_red_mask(image=None):
     return hsv_bound(get_hsv_image(image=image), RED_UPPER, RED_LOWER, 3, 6)
 
+def get_red_mask_image_det(image=None):
+    return hsv_bound(get_hsv_image(image=image), RED_UPPER_IMG, RED_LOWER_IMG, 3, 6)
 
 def get_white_mask(image=None):
     return hsv_bound(get_hsv_image(image=image), WHITE_UPPER, WHITE_LOWER, 3, 6)

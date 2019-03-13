@@ -34,7 +34,8 @@ def main():
     else:
         parking_spot = -1
 
-    print parking_spot
+    sound_pub = rospy.Publisher("/mobile_base/commands/sound", Sound, queue_size=1)
+    
 
     state_machine = smach.StateMachine(outcomes=["complete", "exit"])
     state_introspection_server = smach_ros.IntrospectionServer(
@@ -171,7 +172,7 @@ def main():
 
         smach.StateMachine.add(
             "DETECT3",
-            Detect3(rate sound_pub),
+            Detect3(rate, sound_pub),
             transitions={"turn_right3": "TURN_RIGHT3", "exit": "exit"},
         )
 

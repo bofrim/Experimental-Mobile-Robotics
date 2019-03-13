@@ -9,7 +9,9 @@ from kobuki_msgs.msg import Led
 from kobuki_msgs.msg import Sound
 
 from location2 import the_shape
-from image_processing import get_red_mask, detect_shape, Shapes
+from image_processing import get_red_mask, get_red_mask_image_det, detect_shape, Shapes
+
+from utils import display_count
 
 from collections import defaultdict
 
@@ -28,10 +30,9 @@ class TurnLeft3(smach.State):
 
 
 class Detect3(smach.State):
-    def __init__(self, rate, light_pubs, sound_pub):
+    def __init__(self, rate, sound_pub):
         smach.State.__init__(self, outcomes=["turn_right3", "exit"])
         self.rate = rate
-        self.light_pubs = light_pubs
         self.sound_pub = sound_pub
 
     def execute(self, userdata):
@@ -39,7 +40,7 @@ class Detect3(smach.State):
         global the_shape
         shape_count = defaultdict(int)
         for _ in range(20):
-            red_mask = get_red_mask()
+            red_mask = get_red_mask_image_det()
             cv2.imshow("red_mask_3", red_mask)
             cv2.waitKey(3)
 
@@ -64,18 +65,13 @@ class Detect3(smach.State):
         if discovered_shape == the_shape and not found_flag:
             """Found the correct shape."""
             found_flag = True
-            led_msg = Led()
-            led_msg.value = Led.GREEN
-            self.light_pubs[0].publish(led_msg)
-            self.light_pubs[1].publish(led_msg)
+            display_count(3)
             sound_msg = Sound()
             sound_msg.value = Sound.ON
             self.sound_pub.publish(sound_msg)
         else:
             led_msg = Led()
-            led_msg.value = Led.RED
-            self.light_pubs[0].publish(led_msg)
-            self.light_pubs[1].publish(led_msg)
+            display_count(3, color_primary=Led.RED)
 
         return "turn_right3"
 

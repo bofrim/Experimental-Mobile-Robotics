@@ -10,7 +10,8 @@ from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
 from comp2.msg import Centroid
 from time import time
-from image_processing import get_white_mask, crop, path_mass_center
+from image_processing import get_white_mask
+from utils import display_count
 
 
 class Drive(smach.State):
@@ -101,7 +102,7 @@ class Advancer(Drive):
 
 
 class AtLine(smach.State):
-    def __init__(self, rate, light_pubs, initial_line=0):
+    def __init__(self, rate, initial_line=0):
         smach.State.__init__(
             self,
             outcomes=[
@@ -116,7 +117,6 @@ class AtLine(smach.State):
         )
         self.rate = rate
         self.red_line_num = initial_line
-        self.light_pubs = light_pubs
 
         # IMPORTANT: These states currently assume that the red line at location2
         # is counted twice (for both directions)
@@ -137,10 +137,7 @@ class AtLine(smach.State):
     def execute(self, userdata):
         self.red_line_num += 1
         print("RED LINE NUMBER: ", self.red_line_num)
-        led_off_msg = Led()
-        led_off_msg.value = Led.BLACK
-        self.light_pubs[0].publish(led_off_msg)
-        self.light_pubs[1].publish(led_off_msg)
+        display_count(0)
         return self.next_states[self.red_line_num]
 
 

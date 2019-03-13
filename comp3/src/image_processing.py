@@ -215,6 +215,21 @@ def lowest_object_coord(mask, threshold=100):
     return lowest_coord
 
 
+def right_most_object_coord(mask, threshold=100):
+    """Find the coordinates for the right most object in the mask."""
+    _, contours, _ = cv2.findContours(mask, 1, 2)
+    moments = [cv2.moments(c) for c in contours if cv2.moments(c)["m00"] > threshold]
+    right_most_x = -1
+    right_most_coord = (right_most_x, 0)
+    for m in moments:
+        x, y = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])
+        if x > right_most_x:
+            right_most_x = x
+            right_most_coord = (x, y)
+    return right_most_coord
+
+
+
 def bin_filter(image):
     """"""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

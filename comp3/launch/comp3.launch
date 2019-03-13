@@ -5,6 +5,7 @@
     <include file="$(find turtlebot_bringup)/launch/3dsensor.launch"/>
     <node name="red_line_finder" pkg="comp3" type="red_line_finder.py"/>
     <node name="white_line_finder" pkg="comp3" type="white_line_tracker.py" />
+    <node name="white_line_ramp" pkg="comp3" type="white_line_ramp.py" />
 
     <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
         <param name="video_device" value="$(arg video_device)" />
@@ -13,6 +14,10 @@
         <param name="pixel_format" value="yuyv" />
         <param name="camera_frame_id" value="usb_cam" />
         <param name="io_method" value="mmap"/>
+        <param name="autofocus" value="false"/>
+        <param name="autoexposure" value="false"/>
+        <param name="auto_white_balance" value="false"/>
+        <param name="contrast" value="100"/>
     </node>
     <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
         <remap from="image" to="/usb_cam/image_raw"/>

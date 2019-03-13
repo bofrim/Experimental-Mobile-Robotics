@@ -1,0 +1,20 @@
+<launch>
+    <arg name="map_path" default="$(find comp3)/data/map.yaml"/>
+    <include file="$(find turtlebot_bringup)/launch/minimal.launch"/>
+    <include file="$(find turtlebot_navigation)/launch/amcl_demo.launch">
+        <arg name="map_file" value="$(arg map_path)"/>
+        <rosparam file="$(find comp3)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find comp3)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find comp3)/param/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find comp3)/param/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find comp3)/param/dwa_local_planner_params.yaml" command="load" />
+        <rosparam file="$(find comp3)/param/move_base_params.yaml" command="load" />
+    </include>
+    <include file="$(find turtlebot_teleop)/launch/logitech.launch"/>
+    <include file="$(find turtlebot_rviz_launchers)/launch/view_navigation.launch"/>
+    <param name="/move_base/global_costmap/inflation_layer/inflation_radius" value="0.07"/>
+    <param name="/move_base/local_costmap/inflation_layer/inflation_radius" value="0.07"/>
+    <!--
+    <node name="waypoint_finder" pkg="comp3" type="waypoint_finder.py" output="screen"/>
+    -->
+</launch>

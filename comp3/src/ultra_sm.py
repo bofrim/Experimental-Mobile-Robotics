@@ -14,7 +14,7 @@ from location2 import (
     TurnLeft2End,
 )
 from location3 import TurnLeft3, Detect3, TurnRight3
-from location4 import OffRamp
+from location4 import DriverRamp
 
 from general_states import Driver, Advancer, AtLine, TurnRight
 from geometry_msgs.msg import Twist
@@ -129,7 +129,9 @@ def main():
         )
 
         smach.StateMachine.add(
-            "OFF_RAMP", OffRamp(rate, cmd_vel_pub), transitions={"exit": "exit"}
+            "OFF_RAMP",
+            DriverRamp(rate, cmd_vel_pub),
+            transitions={"exit": "exit"},
         )
 
         smach.StateMachine.add(

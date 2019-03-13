@@ -36,7 +36,6 @@ class TurnLeft2Start(smach.State):
         return "drive_to_objects"
 
 
-# TODO: Drive till no white line
 class DriveToObjects(Drive):
     def __init__(self, rate, pub_node, light_pubs):
         super(DriveToObjects, self).__init__(rate, pub_node, ["detect2", "exit"])

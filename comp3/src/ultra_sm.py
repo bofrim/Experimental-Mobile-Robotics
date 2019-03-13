@@ -14,7 +14,7 @@ from location2 import (
     TurnLeft2End,
 )
 from location3 import TurnLeft3, Detect3, TurnRight3
-from location4 import DriverRamp, DriveToStart, ArSurvey, ArApproach
+from location4 import DriverRamp, DriveToStart, ArSurvey, ArApproach, ParkingSpot, OnRamp
 
 from general_states import Driver, Advancer, AtLine, TurnRight
 from geometry_msgs.msg import Twist
@@ -29,8 +29,12 @@ def main():
     else:
         initial_line = 0
 
-    print initial_line
-    exit()
+    if rospy.has_param("~parking"):
+        parking_spot = rospy.get_param("~parking")
+    else:
+        parking_spot = -1
+
+    print parking_spot
 
     state_machine = smach.StateMachine(outcomes=["complete", "exit"])
     state_introspection_server = smach_ros.IntrospectionServer(
@@ -139,8 +143,8 @@ def main():
 
         smach.StateMachine.add (
             "DRIVE_TO_START",
-            DriveToStart(rate, cmd_vel_pub),
-            transitions={"ar_survey": "AR_SURVEY"}
+            DriveToStart(rate),
+            transitions={"ar_survey": "AR_SURVEY", "parking_spot": "PARKING_SPOT", "on_ramp": "ON_RAMP"}
         )
 
         smach.StateMachine.add(
@@ -152,7 +156,19 @@ def main():
         smach.StateMachine.add(
             "AR_APPROACH",
             ArApproach(rate, cmd_vel_pub),
-            transitions={"exit": "exit"},
+            transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "PARKING_SPOT",
+            ParkingSpot(rate, parking_spot),
+            transitions={"drive_to_start": "DRIVE_TO_START"}
+        )
+
+        smach.StateMachine.add(
+            "ON_RAMP",
+            OnRamp(rate),
+            transitions={"drive": "DRIVE"}
         )
 
         smach.StateMachine.add(

@@ -24,6 +24,7 @@ WAYPOINT_MAP = {
     "6": (Point(0.20461857551725132, 1.6533389602064918, 0.010200000000000004), Quaternion(0.0,0.0,0.9964777382330111,-0.08385772001445518)),
     "7": (Point(0.4272674336836944, 0.83219598399239, 0.0102), Quaternion(0.0, 0.0, 0.9947478059045937, -0.10235625358519646)),
     "8": (Point(1.0648070049458176, -0.302468245750806, 0.010199999999999999), Quaternion(0.0, 0.0, -0.6178099553656561, 0.7863274502718863)),
+    "far": (Point(0.8348034063867399, 2.058496798133918, 0.010199999999999999), Quaternion(0.0, 0.0, 0.4270189450655432, 0.9042426779106981)),
     "on_ramp": (Point(-0.8334473332557941,2.584811945485156, 0.0102), Quaternion(0.0, 0.0, -0.9617331318932912, 0.2739879249505739)),
     "scan": (Point(0.9380181464288736, 1.4855115054663668, 0.0102), Quaternion(0.0, 0.0, 0.0009838736033419004, 0.9999995159962491)),
 }
@@ -69,22 +70,25 @@ class DriverRamp(Drive):
         return "exit"
 
 class DriveToStart(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["ar_survey"])
-        self.pub_node = pub_node
+    def __init__(self, rate):
+        smach.State.__init__(self, outcomes=["ar_survey", "parking_spot", "on_ramp"])
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.client.wait_for_server()
         self.start_pose = MoveBaseGoal()
         self.start_pose.target_pose.header.frame_id = 'map'
         self.start_pose.target_pose.pose.position = WAYPOINT_MAP["scan"][0]
         self.start_pose.target_pose.pose.orientation = WAYPOINT_MAP["scan"][1]
+        self.current_task = 0
+        self.task_list = ["ar_survey", "parking_spot", "on_ramp"]
 
     def execute(self, userdata):
         rospy.sleep(0.5)
         self.client.send_goal(self.start_pose)
         self.client.wait_for_result()
-        
-        return "ar_survey"
+
+        next_state = self.task_list[self.current_task]
+        self.current_task += 1
+        return next_state
 
 
 class ArSurvey(smach.State):
@@ -137,7 +141,7 @@ class ArSurvey(smach.State):
 
 class ArApproach(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["exit"],
+        smach.State.__init__(self, outcomes=["drive_to_start", "exit"],
                                    input_keys=["target_marker"])
         self.pub_node = pub_node
         self.target_marker = None
@@ -172,8 +176,9 @@ class ArApproach(smach.State):
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
 
+        rospy.sleep(2)
         ar_sub.unregister()
-        return "exit"
+        return "drive_to_start"
     
     def calculate_target(self):
         goal = MoveBaseGoal()
@@ -188,10 +193,48 @@ class ArApproach(smach.State):
                 self.target_marker = marker
 
 
-class EmptyParking(smach.State):
-    def __init__(self, rate):
-        smach.State.__init__(self, outcomes=["exit"])
+class ParkingSpot(smach.State):
+    def __init__(self, rate, parking_spot):
+        smach.State.__init__(self, outcomes=["drive_to_start"])
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.client.wait_for_server()
+        self.parking_spot = parking_spot
         self.rate = rate
 
     def execute(self, userdata):
-        return "exit"
+        if self.parking_spot < 1 or self.parking_spot > 8:
+            return "drive_to_start"
+        
+        pose = MoveBaseGoal()
+        pose.target_pose.header.frame_id = 'map'
+        pose.target_pose.pose.position = WAYPOINT_MAP[str(self.parking_spot)][0]
+        pose.target_pose.pose.orientation = WAYPOINT_MAP[str(self.parking_spot)][1]
+
+        self.client.send_goal(pose)
+        self.client.wait_for_result()
+
+        rospy.sleep(2)
+
+        return "drive_to_start"
+
+
+class OnRamp(smach.State):
+    def __init__(self, rate):
+        smach.State.__init__(self, outcomes=["drive"])
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.client.wait_for_server()
+        self.rate = rate
+
+    def execute(self, userdata):  
+        pose = MoveBaseGoal()
+        pose.target_pose.header.frame_id = 'map'
+        pose.target_pose.pose.position = WAYPOINT_MAP["on_ramp"][0]
+        pose.target_pose.pose.orientation = WAYPOINT_MAP["on_ramp"][1]
+
+        self.client.send_goal(pose)
+        self.client.wait_for_result()
+
+        return "drive"
+
+
+        

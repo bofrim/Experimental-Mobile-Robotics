@@ -8,7 +8,7 @@ from sensor_msgs.msg import Image
 from kobuki_msgs.msg import Led
 from kobuki_msgs.msg import Sound
 
-from location2 import the_shape
+from location2 import the_shape, get_the_shape
 from image_processing import (
     get_red_mask,
     get_red_mask_image_det,
@@ -23,7 +23,7 @@ from collections import defaultdict
 
 found_flag = False
 
-g_turns = [69, 92, 80]
+g_turns = [69, 92, 92]
 
 
 class TurnLeft3(smach.State):
@@ -49,11 +49,10 @@ class Detect3(smach.State):
 
     def execute(self, userdata):
         global found_flag
-        global the_shape
 
         twist = Twist()
         twist.linear.x = 0.2
-        for _ in range(10):
+        for _ in range(8):
             twist = Twist()
             twist.linear.x = 0.1
             self.pub_node.publish(twist)
@@ -62,9 +61,9 @@ class Detect3(smach.State):
         new_shape = study_shapes(
             get_red_mask, min_samples=35, topic="usb_cam/image_raw", confidence=0.5
         )
-        print(the_shape, new_shape)
+        print(get_the_shape(), new_shape)
 
-        if the_shape == new_shape and found_flag == False:
+        if get_the_shape() == new_shape and found_flag == False:
             found_flag = True
             sound_msg = Sound()
             sound_msg.value = Sound.ON
@@ -75,7 +74,7 @@ class Detect3(smach.State):
         else:
             display_count(0, self.light_pubs)
 
-        for _ in range(10):
+        for _ in range(8):
             twist = Twist()
             twist.linear.x = -0.1
             self.pub_node.publish(twist)

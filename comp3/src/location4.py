@@ -309,12 +309,12 @@ class ShapeApproach(smach.State):
         mask = get_red_mask(msg)
 
         height, width = mask.shape
-        search_top = height * 0.20
+        search_top = height * 0.30
         search_bot = height * 0.65
         mask[0:search_top, 0:width] = 0
         mask[search_bot:height, 0:width] = 0
 
-        shapes, moments = detect_shape(mask, threshold=500)
+        shapes, moments = detect_shape(mask, threshold=450)
 
         cv2.imshow("WOW", mask)
         cv2.waitKey(1)

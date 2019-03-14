@@ -18,7 +18,7 @@ from geometry_msgs.msg import (
 from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, Sound
-from operations import display_count
+from utils import display_count
 
 MARKER_POSE_TOPIC = "ar_pose_marker"
 

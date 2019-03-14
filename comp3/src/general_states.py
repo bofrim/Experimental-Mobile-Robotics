@@ -5,7 +5,7 @@ import smach, smach_ros
 
 from geometry_msgs.msg import Twist
 from kobuki_msgs.msg import Led
-from operations import simple_turn
+from operations import simple_turn, turn_to_line
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
 from comp2.msg import Centroid
@@ -148,5 +148,6 @@ class TurnRight(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(-77, self.vel_pub)
+        # simple_turn(-77, self.vel_pub)
+        turn_to_line(-77, self.vel_pub)
         return "drive"

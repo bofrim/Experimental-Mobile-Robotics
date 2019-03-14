@@ -17,15 +17,18 @@ from collections import defaultdict
 
 found_flag = False
 
+g_turns = [69, 92, 80]
 
 class TurnLeft3(smach.State):
     def __init__(self, rate, pub_node):
         smach.State.__init__(self, outcomes=["detect3", "exit"])
         self.rate = rate
         self.vel_pub = pub_node
+        self.count = 0
 
     def execute(self, userdata):
-        simple_turn(60, self.vel_pub)
+        simple_turn(g_turns[self.count], self.vel_pub)
+        self.count += 1
         return "detect3"
 
 
@@ -41,10 +44,11 @@ class Detect3(smach.State):
         global the_shape
         twist = Twist()
         twist.linear.x = 0.2
-        for _ in range(8):
+        for _ in range(10):
             twist = Twist()
             twist.linear.x = 0.1
             self.pub_node.publish(twist)
+            rospy.sleep(0.2)
 
         shape_count = defaultdict(int)
         for _ in range(20):
@@ -79,19 +83,23 @@ class Detect3(smach.State):
             led_msg = Led()
             display_count(3, color_primary=Led.RED)
 
-        for _ in range(8):
+        for _ in range(10):
             twist = Twist()
             twist.linear.x = -0.1
             self.pub_node.publish(twist)
-        return "turn_right3"
+            rospy.sleep(0.2)
 
+        return "turn_right3"
+        
 
 class TurnRight3(smach.State):
     def __init__(self, rate, pub_node):
         smach.State.__init__(self, outcomes=["drive", "exit"])
         self.rate = rate
         self.vel_pub = pub_node
+        self.count = 0
 
     def execute(self, userdata):
-        simple_turn(-73, self.vel_pub)
+        simple_turn(-g_turns[self.count], self.vel_pub)
+        self.count += 1
         return "drive"

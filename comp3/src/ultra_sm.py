@@ -146,7 +146,7 @@ def main():
 
         smach.StateMachine.add(
             "DRIVE_TO_START",
-            DriveToStart(rate),
+            DriveToStart(rate, light_pubs),
             transitions={
                 "ar_survey": "AR_SURVEY",
                 "parking_spot": "PARKING_SPOT",
@@ -162,13 +162,13 @@ def main():
 
         smach.StateMachine.add(
             "AR_APPROACH",
-            ArApproach(rate, cmd_vel_pub),
+            ArApproach(rate, cmd_vel_pub, sound_pub, light_pubs),
             transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"},
         )
 
         smach.StateMachine.add(
             "PARKING_SPOT",
-            ParkingSpot(rate, parking_spot),
+            ParkingSpot(rate, parking_spot, sound_pub, light_pubs),
             transitions={"drive_to_start": "DRIVE_TO_START"},
         )
 

@@ -134,7 +134,7 @@ class DriveToStart(smach.State):
             init_pose.target_pose.pose.orientation = WAYPOINT_MAP["8"][1]
             rospy.sleep(0.5)
 
-            self.client.send_goal(pose)
+            self.client.send_goal(init_pose)
             self.client.wait_for_result()
 
         rospy.sleep(0.5)

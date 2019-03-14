@@ -24,7 +24,7 @@ class Drive(smach.State):
         self.twist = Twist()
         self.path_centroid = Centroid()
         self.stop_centroid = Centroid()
-        self.speed = 0.25
+        self.speed = 0.3
 
     def red_line_callback(self, msg):
         self.stop_distance = msg.cy

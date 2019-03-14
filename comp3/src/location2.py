@@ -18,6 +18,8 @@ from image_processing import (
     detect_shape,
     detect_green_shape,
     Shapes,
+    study_shapes,
+    count_objects,
 )
 import cv_bridge
 import cv2
@@ -116,60 +118,24 @@ class Detect2(smach.State):
         self.rate = rate
 
     def execute(self, userdata):
-        # OLD START
-        while not rospy.is_shutdown():
+        # Maybe do some corrections
+        # Count objects
+        the_shape = study_shapes(
+            get_green_mask, min_samples=50, max_samples=150, confidence=0.7
+        )
+
+        count_tally = {1: 0, 2: 0, 3: 0}
+
+        for _ in range(60):
             image = rospy.wait_for_message("camera/rgb/image_raw", Image)
             red_mask = get_red_mask_image_det(image)
             green_mask = get_green_mask(image)
             shape_mask = red_mask | green_mask
+            count = count_objects(shape_mask, threshold=2500)
+            count_tally[count] += 1
+        display_count(max(count_tally))
 
-            canvas = cv_bridge.CvBridge().imgmsg_to_cv2(image, desired_encoding="bgr8")
-            shapes, moments = detect_shape(shape_mask, canvas=canvas)
-            big_moments = [m for m in moments if m["m00"] > 3050]
-
-            # cv2.imshow("window", canvas)
-            # cv2.waitKey(1)
-
-            avg_y_center = numpy.mean(
-                [int(M["m01"] / (M["m00"] + 1.5)) for M in big_moments]
-            )
-            print("#shapes, avg y", len(big_moments), avg_y_center)
-            if len(big_moments) > 0 and avg_y_center > 160:
-                # Try to get a good read on the shape
-                shape_count = 0
-                prev_shape = Shapes.unknown
-                shape_totals = defaultdict(int)
-                for _ in range(90):
-                    shape = detect_green_shape()
-                    if shape == Shapes.unknown:
-                        shape_count = 0
-                        continue
-                    shape_totals[shape] += 1
-                    if shape == prev_shape:
-                        shape_count += 1
-                    else:
-                        prev_shape = shape
-                        shape_count = 0
-
-                    if shape_count > 8:
-                        print("discovered with a sequence")
-                        break
-                else:
-                    print("discovered with accumulation")
-                    print(shape_totals)
-                    shape = max(shape_totals, key=shape_totals.get)
-                    self.rate.sleep()
-
-                    # Possibly add timeout - which sets triangle ;)
-
-                # Maybe center the shapes
-                ("SAW IMAGES")
-                the_shape = shape
-                print("The shape is: ", the_shape.name)
-                # Show the count
-                display_count(len(big_moments))
-                break
-
+        print("Counted:", max(count_tally))
         return "turn_180"
 
 

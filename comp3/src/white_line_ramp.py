@@ -6,7 +6,12 @@ import smach, smach_ros
 from comp2.msg import Centroid
 from sensor_msgs.msg import Image
 
-from image_processing import right_most_object_coord, hsv_bound, WHITE_UPPER, WHITE_LOWER
+from image_processing import (
+    right_most_object_coord,
+    hsv_bound,
+    WHITE_UPPER,
+    WHITE_LOWER,
+)
 
 
 class WhiteLineRampTracker:
@@ -31,10 +36,6 @@ class WhiteLineRampTracker:
         mask[search_bot:h, 0:w] = 0
 
         cx, cy = right_most_object_coord(mask)
-
-        cv2.circle(mask, (cx, cy), 20, (0,0,255), -1)
-        cv2.imshow("white_ramp", mask)
-        cv2.waitKey(3)
 
         centroid_msg = Centroid()
         centroid_msg.cx = cx

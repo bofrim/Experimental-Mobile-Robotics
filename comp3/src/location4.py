@@ -228,8 +228,8 @@ class OnRamp(smach.State):
     def execute(self, userdata):
         pose_prepare = MoveBaseGoal()
         pose_prepare.target_pose.header.frame_id = 'map'
-        pose_prepare.target_pose.pose.position = WAYPOINT_MAP["far"][0]
-        pose_prepare.target_pose.pose.orientation = WAYPOINT_MAP["far"][1]
+        pose_prepare.target_pose.pose.position = WAYPOINT_MAP["1"][0]
+        pose_prepare.target_pose.pose.orientation = WAYPOINT_MAP["1"][1]
 
         self.client.send_goal(pose_prepare)
         self.client.wait_for_result()

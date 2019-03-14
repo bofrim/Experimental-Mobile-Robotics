@@ -17,7 +17,8 @@ from geometry_msgs.msg import (
 )
 from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from kobuki_msgs.msg import Led
+from kobuki_msgs.msg import Led, Sound
+from operations import display_count
 
 MARKER_POSE_TOPIC = "ar_pose_marker"
 
@@ -115,7 +116,7 @@ class DriverRamp(Drive):
 
 
 class DriveToStart(smach.State):
-    def __init__(self, rate):
+    def __init__(self, rate, light_pubs):
         smach.State.__init__(self, outcomes=["ar_survey", "parking_spot", "on_ramp"])
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
@@ -125,6 +126,7 @@ class DriveToStart(smach.State):
         self.start_pose.target_pose.pose.orientation = WAYPOINT_MAP["scan"][1]
         self.current_task = 0
         self.task_list = ["ar_survey", "parking_spot", "on_ramp"]
+        self.light_pubs = light_pubs
 
     def execute(self, userdata):
         if self.current_task == 0:
@@ -143,6 +145,7 @@ class DriveToStart(smach.State):
 
         next_state = self.task_list[self.current_task]
         self.current_task += 1
+        display_count(0, self.light_pubs)
         return next_state
 
 
@@ -201,7 +204,7 @@ class ArSurvey(smach.State):
 
 
 class ArApproach(smach.State):
-    def __init__(self, rate, pub_node):
+    def __init__(self, rate, pub_node, sound_pub, light_pubs):
         smach.State.__init__(
             self, outcomes=["drive_to_start", "exit"], input_keys=["target_marker"]
         )
@@ -209,6 +212,9 @@ class ArApproach(smach.State):
         self.target_marker = None
         self.target_marker_id = None
         self.target_marker_frame = None
+        self.sound_pub = sound_pub
+        self.light_pubs = light_pubs
+        self.rate = rate
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
 
@@ -242,6 +248,13 @@ class ArApproach(smach.State):
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
 
+        sound_msg = Sound()
+        sound_msg.value = Sound.ON
+        self.sound_pub.publish(sound_msg)
+        display_count(3, self.light_pubs)
+        for _ in range(8):
+            self.rate.sleep()
+
         rospy.sleep(2)
         ar_sub.unregister()
         return "drive_to_start"
@@ -260,12 +273,14 @@ class ArApproach(smach.State):
 
 
 class ParkingSpot(smach.State):
-    def __init__(self, rate, parking_spot):
+    def __init__(self, rate, parking_spot, sound_pub, light_pubs):
         smach.State.__init__(self, outcomes=["drive_to_start"])
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
         self.parking_spot = parking_spot
         self.rate = rate
+        self.sound_pub = sound_pub
+        self.light_pubs = light_pubs
 
     def execute(self, userdata):
         if self.parking_spot < 1 or self.parking_spot > 8:
@@ -278,6 +293,13 @@ class ParkingSpot(smach.State):
 
         self.client.send_goal(pose)
         self.client.wait_for_result()
+
+        sound_msg = Sound()
+        sound_msg.value = Sound.ON
+        self.sound_pub.publish(sound_msg)
+        display_count(3, self.light_pubs)
+        for _ in range(8):
+            self.rate.sleep()
 
         rospy.sleep(2)
 

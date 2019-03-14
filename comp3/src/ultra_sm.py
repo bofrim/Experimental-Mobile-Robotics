@@ -14,7 +14,14 @@ from location2 import (
     TurnLeft2End,
 )
 from location3 import TurnLeft3, Detect3, TurnRight3
-from location4 import DriverRamp, DriveToStart, ArSurvey, ArApproach, ParkingSpot, OnRamp
+from location4 import (
+    DriverRamp,
+    DriveToStart,
+    ArSurvey,
+    ArApproach,
+    ParkingSpot,
+    OnRamp,
+)
 
 from general_states import Driver, Advancer, AtLine, TurnRight
 from geometry_msgs.msg import Twist
@@ -35,7 +42,6 @@ def main():
         parking_spot = -1
 
     sound_pub = rospy.Publisher("/mobile_base/commands/sound", Sound, queue_size=1)
-    
 
     state_machine = smach.StateMachine(outcomes=["complete", "exit"])
     state_introspection_server = smach_ros.IntrospectionServer(
@@ -134,10 +140,14 @@ def main():
             transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"},
         )
 
-        smach.StateMachine.add (
+        smach.StateMachine.add(
             "DRIVE_TO_START",
             DriveToStart(rate),
-            transitions={"ar_survey": "AR_SURVEY", "parking_spot": "PARKING_SPOT", "on_ramp": "ON_RAMP"}
+            transitions={
+                "ar_survey": "AR_SURVEY",
+                "parking_spot": "PARKING_SPOT",
+                "on_ramp": "ON_RAMP",
+            },
         )
 
         smach.StateMachine.add(
@@ -155,14 +165,10 @@ def main():
         smach.StateMachine.add(
             "PARKING_SPOT",
             ParkingSpot(rate, parking_spot),
-            transitions={"drive_to_start": "DRIVE_TO_START"}
+            transitions={"drive_to_start": "DRIVE_TO_START"},
         )
 
-        smach.StateMachine.add(
-            "ON_RAMP",
-            OnRamp(rate),
-            transitions={"drive": "DRIVE"}
-        )
+        smach.StateMachine.add("ON_RAMP", OnRamp(rate), transitions={"drive": "DRIVE"})
 
         smach.StateMachine.add(
             "TURN_LEFT_3",
@@ -172,7 +178,7 @@ def main():
 
         smach.StateMachine.add(
             "DETECT3",
-            Detect3(rate, sound_pub),
+            Detect3(rate, cmd_vel_pub, sound_pub),
             transitions={"turn_right3": "TURN_RIGHT3", "exit": "exit"},
         )
 

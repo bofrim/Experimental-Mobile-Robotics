@@ -30,14 +30,22 @@ class TurnLeft3(smach.State):
 
 
 class Detect3(smach.State):
-    def __init__(self, rate, sound_pub):
+    def __init__(self, rate, pub_node, sound_pub):
         smach.State.__init__(self, outcomes=["turn_right3", "exit"])
         self.rate = rate
         self.sound_pub = sound_pub
+        self.pub_node = pub_node
 
     def execute(self, userdata):
         global found_flag
         global the_shape
+        twist = Twist()
+        twist.linear.x = 0.2
+        for _ in range(8):
+            twist = Twist()
+            twist.linear.x = 0.1
+            self.pub_node.publish(twist)
+
         shape_count = defaultdict(int)
         for _ in range(20):
             red_mask = get_red_mask_image_det()
@@ -71,6 +79,10 @@ class Detect3(smach.State):
             led_msg = Led()
             display_count(3, color_primary=Led.RED)
 
+        for _ in range(8):
+            twist = Twist()
+            twist.linear.x = -0.1
+            self.pub_node.publish(twist)
         return "turn_right3"
 
 

@@ -127,6 +127,16 @@ class DriveToStart(smach.State):
         self.task_list = ["ar_survey", "parking_spot", "on_ramp"]
 
     def execute(self, userdata):
+        if self.current_task == 0:
+            init_pose = MoveBaseGoal()
+            init_pose.target_pose.header.frame_id = "map"
+            init_pose.target_pose.pose.position = WAYPOINT_MAP["8"][0]
+            init_pose.target_pose.pose.orientation = WAYPOINT_MAP["8"][1]
+            rospy.sleep(0.5)
+
+            self.client.send_goal(pose)
+            self.client.wait_for_result()
+
         rospy.sleep(0.5)
         self.client.send_goal(self.start_pose)
         self.client.wait_for_result()

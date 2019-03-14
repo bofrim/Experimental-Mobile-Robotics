@@ -116,7 +116,7 @@ def main():
 
         smach.StateMachine.add(
             "DETECT2",
-            Detect2(rate, light_pubs),
+            Detect2(rate, sound_pub, light_pubs),
             transitions={"turn_180": "TURN_180", "exit": "exit"},
         )
 

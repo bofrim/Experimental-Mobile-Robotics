@@ -49,6 +49,7 @@ class Detect3(smach.State):
 
     def execute(self, userdata):
         global found_flag
+        global the_shape
 
         twist = Twist()
         twist.linear.x = 0.2
@@ -59,16 +60,18 @@ class Detect3(smach.State):
             rospy.sleep(0.2)
 
         new_shape = study_shapes(
-            get_red_mask, min_samples=25, topic="usb_cam/image_raw"
+            get_red_mask, min_samples=35, topic="usb_cam/image_raw", confidence=0.5
         )
         print(the_shape, new_shape)
 
-        if the_shape == new_shape:
-            # Found
+        if the_shape == new_shape and found_flag == False:
+            found_flag = True
             sound_msg = Sound()
             sound_msg.value = Sound.ON
             self.sound_pub.publish(sound_msg)
             display_count(3, self.light_pubs)
+            for _ in range(8):
+                self.rate.sleep()
         else:
             display_count(0, self.light_pubs)
 

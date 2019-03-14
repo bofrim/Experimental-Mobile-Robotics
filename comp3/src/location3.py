@@ -41,7 +41,6 @@ class Detect3(smach.State):
         shape_count = defaultdict(int)
         for _ in range(20):
             red_mask = get_red_mask_image_det()
-            cv2.imshow("red_mask_3", red_mask)
             cv2.waitKey(3)
 
             shapes, moments = detect_shape(red_mask, threshold=500)

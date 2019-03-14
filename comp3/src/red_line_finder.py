@@ -57,9 +57,6 @@ class RedLineFinder:
         cx, cy = lowest_object_coord(mask)
         height, width = mask.shape
 
-        cv2.imshow("red_mask", mask)
-        cv2.waitKey(3)
-
         centroid_msg = Centroid()
         centroid_msg.cx = cx
         centroid_msg.cy = cy

@@ -51,9 +51,6 @@ class WhiteLineTracker:
             centroid_msg.err = 0
             self.centroid_pub.publish(centroid_msg)
 
-        cv2.imshow("window", mask)
-        cv2.waitKey(3)
-
 
 rospy.init_node("white_line_finder")
 follower = WhiteLineTracker()

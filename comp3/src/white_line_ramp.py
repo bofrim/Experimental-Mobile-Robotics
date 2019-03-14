@@ -32,10 +32,6 @@ class WhiteLineRampTracker:
 
         cx, cy = right_most_object_coord(mask)
 
-        cv2.circle(mask, (cx, cy), 20, (0,0,255), -1)
-        cv2.imshow("white_ramp", mask)
-        cv2.waitKey(3)
-
         centroid_msg = Centroid()
         centroid_msg.cx = cx
         centroid_msg.cy = cy

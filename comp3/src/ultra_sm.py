@@ -14,7 +14,7 @@ from location2 import (
     TurnLeft2End,
 )
 from location3 import TurnLeft3, Detect3, TurnRight3
-from location4 import DriverRamp, DriveToStart, ArSurvey, ArApproach, ParkingSpot, OnRamp
+from location4 import DriverRamp, DriveToStart, ArSurvey, ArApproach, ParkingSpot, ShapeApproach, OnRamp
 
 from general_states import Driver, Advancer, AtLine, TurnRight
 from geometry_msgs.msg import Twist
@@ -137,7 +137,7 @@ def main():
         smach.StateMachine.add (
             "DRIVE_TO_START",
             DriveToStart(rate),
-            transitions={"ar_survey": "AR_SURVEY", "parking_spot": "PARKING_SPOT", "on_ramp": "ON_RAMP"}
+            transitions={"ar_survey": "AR_SURVEY", "parking_spot": "PARKING_SPOT", "shape_survey": "SHAPE_APPROACH", "on_ramp": "ON_RAMP"}
         )
 
         smach.StateMachine.add(
@@ -156,6 +156,12 @@ def main():
             "PARKING_SPOT",
             ParkingSpot(rate, parking_spot),
             transitions={"drive_to_start": "DRIVE_TO_START"}
+        )
+
+        smach.StateMachine.add(
+            "SHAPE_APPROACH",
+            ShapeApproach(rate, cmd_vel_pub),
+            transitions={"drive_to_start": "exit", "exit": "exit"}
         )
 
         smach.StateMachine.add(

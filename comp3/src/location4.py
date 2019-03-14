@@ -2,13 +2,18 @@
 import actionlib
 import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
+import tf
+
+from math import sqrt
+
+from image_processing import detect_shape, get_red_mask
 
 from comp2.msg import Centroid
 from general_states import Drive
 
 from ar_track_alvar_msgs.msg import AlvarMarker, AlvarMarkers
 from geometry_msgs.msg import Twist, Point, Quaternion, PoseWithCovarianceStamped, PoseWithCovariance, Pose
-from sensor_msgs.msg import Joy
+from sensor_msgs.msg import Joy, Image
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led
 
@@ -53,6 +58,7 @@ class DriverRamp(Drive):
                 initial_pose_cov.pose = initial_pose
                 initial_pose_cov_stamp.pose = initial_pose_cov
                 
+                rospy.sleep(0.1)
                 pose_pub.publish(initial_pose_cov_stamp)
                 rospy.loginfo(" ...Sent.")
 
@@ -71,7 +77,7 @@ class DriverRamp(Drive):
 
 class DriveToStart(smach.State):
     def __init__(self, rate):
-        smach.State.__init__(self, outcomes=["ar_survey", "parking_spot", "on_ramp"])
+        smach.State.__init__(self, outcomes=["ar_survey", "parking_spot", "shape_survey", "on_ramp"])
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.client.wait_for_server()
         self.start_pose = MoveBaseGoal()
@@ -85,6 +91,8 @@ class DriveToStart(smach.State):
         rospy.sleep(0.5)
         self.client.send_goal(self.start_pose)
         self.client.wait_for_result()
+
+        return "shape_survey"
 
         next_state = self.task_list[self.current_task]
         self.current_task += 1
@@ -218,6 +226,112 @@ class ParkingSpot(smach.State):
         return "drive_to_start"
 
 
+class ShapeApproach(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["drive_to_start", "exit"])
+        self.pub_node = pub_node
+        self.location_listener = tf.TransformListener()
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.client.wait_for_server()
+        self.shape_type = None
+        self.shape_size = 0
+        self.shape_centroid = Centroid()
+        self.shape_centroid.cx = -1
+        self.shape_centroid.cy = -1
+        self.shape_centroid.err = 0
+
+    def execute(self, userdata):
+        image_sub = rospy.Subscriber(
+            "camera/rgb/image_raw", Image, self.image_callback
+        )
+
+        rospy.sleep(3)
+        while self.shape_size < 8000 and not rospy.is_shutdown():
+            if self.shape_size == 0:
+                print "no red friends :("
+                continue
+
+            print "Approaching"
+            twist = Twist()
+            twist.linear.x = 0.2
+            twist.angular.z = (-float(self.shape_centroid.err) / 50)
+            self.pub_node.publish(twist)
+
+        print "Close Enough"
+        self.client.send_goal(self.calculate_target())
+        self.client.wait_for_result()
+
+        if rospy.is_shutdown():
+            image_sub.unregister()
+            return "exit"
+
+        rospy.sleep(2)
+        image_sub.unregister()
+        return "drive_to_start"
+    
+    def calculate_target(self):
+        trans, rot = self.location_listener.lookupTransform("/map", "/base_link", rospy.Time(0))
+        base_x, base_y, base_z = trans
+
+        closest_distance = 1000
+        closest_waypoint_pose = None
+        closest_waypoint_rot = None
+
+        for waypoint_num in range(1, 9):
+            waypoint_pose = WAYPOINT_MAP[str(waypoint_num)][0]
+            waypoint_rot = WAYPOINT_MAP[str(waypoint_num)][1]
+            eucl_distance = sqrt(pow((waypoint_pose.x - base_x), 2) + pow((waypoint_pose.y - base_y), 2))
+
+            if eucl_distance < closest_distance:
+                closest_distance = eucl_distance
+                closest_waypoint_pose = waypoint_pose
+                closest_waypoint_rot = waypoint_rot
+                
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = 'map'
+        goal.target_pose.pose.position = closest_waypoint_pose
+        goal.target_pose.pose.orientation = closest_waypoint_rot
+        return goal
+
+    def image_callback(self, msg):
+        mask = get_red_mask(msg)
+        shapes, moments = detect_shape(mask, threshold=700)
+
+        height, width = mask.shape
+
+        search_top = 0
+        search_bot = height * 0.75
+        mask[0:search_top, 0:width] = 0
+        mask[search_bot:height, 0:width] = 0
+
+        cv2.imshow("WOW", mask)
+        cv2.waitKey(1)
+
+        shape_centroid = Centroid()
+        shape_centroid.cx = -1
+        shape_centroid.cy = -1
+        shape_centroid.err = 1000
+
+        target_shape = None
+        target_shape_size = 0
+
+        for moment, shape in zip(moments, shapes):
+            cx, cy = int(moment["m10"] / moment["m00"]), int(moment["m01"] / moment["m00"])
+            size = int(moment["m00"])
+            cx_error = cx - width / 2
+
+            if abs(cx_error) < abs(shape_centroid.err):
+                shape_centroid.cx = cx
+                shape_centroid.cy = cy
+                shape_centroid.err = cx_error
+                target_shape = shape
+                target_shape_size = size
+                
+        self.shape_centroid = shape_centroid
+        self.shape_size = target_shape_size
+        self.shape_type = target_shape
+ 
+
 class OnRamp(smach.State):
     def __init__(self, rate):
         smach.State.__init__(self, outcomes=["drive"])
@@ -228,8 +342,8 @@ class OnRamp(smach.State):
     def execute(self, userdata):
         pose_prepare = MoveBaseGoal()
         pose_prepare.target_pose.header.frame_id = 'map'
-        pose_prepare.target_pose.pose.position = WAYPOINT_MAP["far"][0]
-        pose_prepare.target_pose.pose.orientation = WAYPOINT_MAP["far"][1]
+        pose_prepare.target_pose.pose.position = WAYPOINT_MAP["1"][0]
+        pose_prepare.target_pose.pose.orientation = WAYPOINT_MAP["1"][1]
 
         self.client.send_goal(pose_prepare)
         self.client.wait_for_result()
@@ -245,4 +359,20 @@ class OnRamp(smach.State):
         return "drive"
 
 
-        
+if __name__ == "__main__":
+    rospy.init_node("test_shape_recog")
+    
+    state_machine = smach.StateMachine(outcomes=["exit"])
+    cmd_vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=1)
+
+    rate = rospy.Rate(10)
+
+    with state_machine:
+        smach.StateMachine.add(
+            "SHAPE_APPROACH",
+            ShapeApproach(rate, cmd_vel_pub),
+            transitions={"drive_to_start": "exit", "exit": "exit"},
+        )
+
+    state_machine.execute()
+    state_introspection_server.stop()

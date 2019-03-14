@@ -102,7 +102,7 @@ def detect_shape(mask, canvas=None, threshold=100):
 
 
 def lowest_object_coord(mask, threshold=100):
-    """Find the coordinates of the lowes object in the mask.
+    """Find the coordinates of the lowest object in the mask.
     
     Note: The lowest object corresponds to the largest y coord
     """

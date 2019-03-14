@@ -41,13 +41,14 @@ class TurnLeft2Start(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(60, self.vel_pub)
+        simple_turn(64, self.vel_pub)
         return "drive_to_objects"
 
 
 class DriveToObjects(Drive):
     def __init__(self, rate, pub_node):
         super(DriveToObjects, self).__init__(rate, pub_node, ["detect2", "exit"])
+        #self.pub_node = pub_node
 
     def execute(self, userdata):
         global the_shape
@@ -58,6 +59,13 @@ class DriveToObjects(Drive):
         while not rospy.is_shutdown():
 
             if self.path_centroid.cx == -1 or self.path_centroid.cy == -1:
+                twist = Twist()
+                twist.linear.x = -0.1
+
+                for _ in range(0, 7):
+                    self.vel_pub.publish(twist)
+                    rospy.sleep(0.2)
+
                 white_line_sub.unregister()
                 return "detect2"
 

@@ -124,6 +124,7 @@ class Detect2(smach.State):
             get_green_mask, min_samples=50, max_samples=150, confidence=0.7
         )
 
+
         count_tally = {1: 0, 2: 0, 3: 0}
 
         for _ in range(60):
@@ -131,11 +132,13 @@ class Detect2(smach.State):
             red_mask = get_red_mask_image_det(image)
             green_mask = get_green_mask(image)
             shape_mask = red_mask | green_mask
-            count = count_objects(shape_mask, threshold=2500)
-            count_tally[count] += 1
+            count = count_objects(shape_mask, threshold=4000)
+            if count in count_tally:
+                count_tally[count] += 1
         display_count(max(count_tally))
+        print(count_tally)
 
-        print("Counted:", max(count_tally))
+        print("Counted:", max(count_tally, key=count_tally.get))
         return "turn_180"
 
 

@@ -255,7 +255,7 @@ def get_white_mask(image=None, topic="camera/rgb/image_raw"):
     )
 
 
-def get_green_mask(image=None):
+def get_green_mask(image=None, topic="camera/rgb/image_raw"):
     # return hsv_bound(get_hsv_image(image=image), GREEN_UPPER, GREEN_LOWER, 3, 6)
     hsv = get_hsv_image(image=image)
     mask = cv2.inRange(hsv, np.array(GREEN_LOWER_180), np.array(GREEN_UPPER_180))

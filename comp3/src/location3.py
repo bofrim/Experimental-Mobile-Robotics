@@ -25,7 +25,7 @@ class TurnLeft3(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(63, self.vel_pub)
+        simple_turn(60, self.vel_pub)
         return "detect3"
 
 

@@ -15,21 +15,12 @@ def simple_turn(angle, twist_pub, max_error=3, anglular_scale=1.0):
     theta = init_theta
     direction = np.sign(angle)
     target_theta = init_theta + angle
-    # print("pre target: ", target_theta)
     if target_theta > 180:
         target_theta = target_theta % 360 - 360
     if target_theta < -180:
         target_theta = target_theta % -360 + 360
-    # print("post target: ", target_theta)
 
     while abs(target_theta - theta) > max_error:
-        # print(
-        #     "target, theta, diff > max err",
-        #     int(target_theta),
-        #     int(theta),
-        #     int(abs(target_theta - theta)),
-        #     int(max_error),
-        # )
         out_twist = Twist()
         out_twist.angular.z = direction * anglular_scale
         twist_pub.publish(out_twist)
@@ -50,6 +41,7 @@ def turn_to_line(approx_angle, twist_pub, max_error=10, anglular_scale=1.0):
         "white_line_centroid", Centroid, centroid_turn_callback
     )
     g_prev_err = 0
+    print(abs(g_centroid.err))
     while abs(g_centroid.err) > max_error or g_centroid.cx == -1:
         out_twist = Twist()
         delta_err = g_centroid.err - g_prev_err

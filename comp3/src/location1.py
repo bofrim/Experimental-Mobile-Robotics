@@ -19,13 +19,7 @@ class TurnLeft1(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(67, self.vel_pub)
-
-        # Remove this
-        for _ in range(25):
-            self.vel_pub.publish(Twist())
-            self.rate.sleep()
-
+        simple_turn(64, self.vel_pub)
         return "detect1"
 
 
@@ -41,10 +35,18 @@ class Detect1(smach.State):
         for _ in range(7):
             image = rospy.wait_for_message("camera/rgb/image_raw", Image)
             red_mask = get_red_mask_image_det(image)
+            h, w = red_mask.shape
+            search_top = h * 0.7
+            search_bot = h
+            red_mask[0:search_top, 0:w] = 0
+            red_mask[search_bot:h, 0:w] = 0
             # canvas = cv_bridge.CvBridge().imgmsg_to_cv2(image, desired_encoding="bgr8")
             # shapes, moments = detect_shape(red_mask, canvas)
             count = count_objects(red_mask)
             max_count = max(count, max_count)
+            
+        cv2.imshow("redsmak", red_mask)
+        cv2.waitKey(1000)
 
         # TODO: Show detection in lights
         display_count(max_count)

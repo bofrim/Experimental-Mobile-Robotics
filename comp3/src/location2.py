@@ -6,7 +6,7 @@ from collections import defaultdict
 from operations import simple_turn
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
-from kobuki_msgs.msg import Led
+from kobuki_msgs.msg import Led, Sound
 
 from comp2.msg import Centroid
 from general_states import Drive
@@ -112,15 +112,17 @@ class DriveFromObjects(Drive):
 
 
 class Detect2(smach.State):
-    def __init__(self, rate, light_pubs):
+    def __init__(self, rate, sound_pub, light_pubs):
         smach.State.__init__(self, outcomes=["turn_180", "exit"])
         self.bridge = cv_bridge.CvBridge()
         self.rate = rate
+        self.sound_pub = sound_pub
         self.light_pubs = light_pubs
 
     def execute(self, userdata):
         # Maybe do some corrections
         # Count objects
+        global the_shape
         the_shape = study_shapes(
             get_green_mask, min_samples=50, max_samples=150, confidence=0.7
         )
@@ -137,6 +139,14 @@ class Detect2(smach.State):
                 count_tally[count] += 1
         display_count(max(count_tally), self.light_pubs)
         print(count_tally)
+
+        sound_msg = Sound()
+        sound_msg.value = Sound.ON
+        for i in range(max(count_tally, key=count_tally.get) - 1):
+            self.sound_pub.publish(sound_msg)
+            for _ in range(8):
+                self.rate.sleep()
+        self.sound_pub.publish(sound_msg)
 
         print("Counted:", max(count_tally, key=count_tally.get))
         return "turn_180"

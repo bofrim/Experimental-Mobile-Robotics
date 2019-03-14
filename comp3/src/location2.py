@@ -28,6 +28,11 @@ from utils import display_count
 the_shape = Shapes.unknown
 
 
+def get_the_shape():
+    global the_shape
+    return the_shape
+
+
 class TurnLeft2Start(smach.State):
     def __init__(self, rate, pub_node):
         smach.State.__init__(self, outcomes=["drive_to_objects", "exit"])
@@ -36,7 +41,7 @@ class TurnLeft2Start(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(55, self.vel_pub)
+        simple_turn(60, self.vel_pub)
         return "drive_to_objects"
 
 
@@ -124,7 +129,7 @@ class Detect2(smach.State):
         # Count objects
         global the_shape
         the_shape = study_shapes(
-            get_green_mask, min_samples=50, max_samples=150, confidence=0.7
+            get_green_mask, min_samples=50, max_samples=150, confidence=0.6
         )
 
         count_tally = {1: 0, 2: 0, 3: 0}
@@ -134,10 +139,10 @@ class Detect2(smach.State):
             red_mask = get_red_mask_image_det(image)
             green_mask = get_green_mask(image)
             shape_mask = red_mask | green_mask
-            count = count_objects(shape_mask, threshold=4000)
+            count = count_objects(shape_mask, threshold=2000)
             if count in count_tally:
                 count_tally[count] += 1
-        display_count(max(count_tally), self.light_pubs)
+        display_count(max(count_tally, key=count_tally.get), self.light_pubs)
         print(count_tally)
 
         sound_msg = Sound()
@@ -149,6 +154,7 @@ class Detect2(smach.State):
         self.sound_pub.publish(sound_msg)
 
         print("Counted:", max(count_tally, key=count_tally.get))
+        print("The shape is: ", the_shape)
         return "turn_180"
 
 
@@ -172,7 +178,7 @@ class TurnLeft2End(smach.State):
         self.vel_pub = pub_node
 
     def execute(self, userdata):
-        simple_turn(40, self.vel_pub)
+        simple_turn(43, self.vel_pub)
         return "drive"
 
 

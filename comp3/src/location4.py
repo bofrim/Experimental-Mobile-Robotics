@@ -251,7 +251,7 @@ class ArApproach(smach.State):
         sound_msg = Sound()
         sound_msg.value = Sound.ON
         self.sound_pub.publish(sound_msg)
-        display_count(3, self.light_pubs)
+        display_count(3, self.light_pubs, color_primary=Led.GREEN)
         for _ in range(8):
             self.rate.sleep()
 
@@ -297,7 +297,7 @@ class ParkingSpot(smach.State):
         sound_msg = Sound()
         sound_msg.value = Sound.ON
         self.sound_pub.publish(sound_msg)
-        display_count(3, self.light_pubs)
+        display_count(3, self.light_pubs, color_primary=Led.RED)
         for _ in range(8):
             self.rate.sleep()
 

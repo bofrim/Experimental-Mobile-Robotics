@@ -7,6 +7,7 @@ import tf
 from math import sqrt
 
 from image_processing import detect_shape, get_red_mask
+from utils import display_count
 
 from comp2.msg import Centroid
 from general_states import Drive
@@ -31,8 +32,11 @@ WAYPOINT_MAP = {
     "8": (Point(1.0648070049458176, -0.302468245750806, 0.010199999999999999), Quaternion(0.0, 0.0, -0.6178099553656561, 0.7863274502718863)),
     "far": (Point(0.8348034063867399, 2.058496798133918, 0.010199999999999999), Quaternion(0.0, 0.0, 0.4270189450655432, 0.9042426779106981)),
     "on_ramp": (Point(-0.8334473332557941,2.584811945485156, 0.0102), Quaternion(0.0, 0.0, -0.9617331318932912, 0.2739879249505739)),
-    "scan": (Point(0.9380181464288736, 1.4855115054663668, 0.0102), Quaternion(0.0, 0.0, 0.0009838736033419004, 0.9999995159962491)),
+    "scan": (Point(1.10, 1.4855115054663668, 0.0102), Quaternion(0.0, 0.0, 0.0009838736033419004, 0.9999995159962491)),
 }
+
+#    "scan": (Point(0.9380181464288736, 1.4855115054663668, 0.0102), Quaternion(0.0, 0.0, 0.0009838736033419004, 0.9999995159962491)),
+
 
 class DriverRamp(Drive):
     def __init__(self, rate, pub_node):
@@ -184,6 +188,8 @@ class ArApproach(smach.State):
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
 
+        display_count(2)
+
         rospy.sleep(2)
         ar_sub.unregister()
         return "drive_to_start"
@@ -221,6 +227,7 @@ class ParkingSpot(smach.State):
         self.client.send_goal(pose)
         self.client.wait_for_result()
 
+        display_count(2, Led.RED)
         rospy.sleep(2)
 
         return "drive_to_start"
@@ -245,25 +252,30 @@ class ShapeApproach(smach.State):
             "camera/rgb/image_raw", Image, self.image_callback
         )
 
-        rospy.sleep(3)
-        while self.shape_size < 8000 and not rospy.is_shutdown():
+        rospy.sleep(5)
+        print "INIT SIZE: " + str(self.shape_size)
+        while self.shape_size < 6474 and not rospy.is_shutdown():
             if self.shape_size == 0:
                 print "no red friends :("
                 continue
 
-            print "Approaching"
+            print "SIZE: " + str(self.shape_size)
+            print "ERROR: " + str(self.shape_centroid.err)
             twist = Twist()
             twist.linear.x = 0.2
-            twist.angular.z = (-float(self.shape_centroid.err) / 50)
+            twist.angular.z = (-float(self.shape_centroid.err) / 75)
             self.pub_node.publish(twist)
+            rospy.sleep(0.1)
+
+        if rospy.is_shutdown():
+            image_sub.unregister()
+            return "exit"
 
         print "Close Enough"
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
 
-        if rospy.is_shutdown():
-            image_sub.unregister()
-            return "exit"
+        display_count(2, Led.ORANGE)
 
         rospy.sleep(2)
         image_sub.unregister()
@@ -295,14 +307,14 @@ class ShapeApproach(smach.State):
 
     def image_callback(self, msg):
         mask = get_red_mask(msg)
-        shapes, moments = detect_shape(mask, threshold=700)
 
         height, width = mask.shape
-
-        search_top = 0
-        search_bot = height * 0.75
+        search_top = height * 0.20
+        search_bot = height * 0.65
         mask[0:search_top, 0:width] = 0
         mask[search_bot:height, 0:width] = 0
+
+        shapes, moments = detect_shape(mask, threshold=500)
 
         cv2.imshow("WOW", mask)
         cv2.waitKey(1)

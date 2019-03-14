@@ -9,7 +9,13 @@ from kobuki_msgs.msg import Led
 from kobuki_msgs.msg import Sound
 
 from location2 import the_shape
-from image_processing import get_red_mask, get_red_mask_image_det, detect_shape, Shapes
+from image_processing import (
+    get_red_mask,
+    get_red_mask_image_det,
+    detect_shape,
+    Shapes,
+    study_shapes,
+)
 
 from utils import display_count
 
@@ -41,7 +47,7 @@ class Detect3(smach.State):
 
     def execute(self, userdata):
         global found_flag
-        global the_shape
+
         twist = Twist()
         twist.linear.x = 0.2
         for _ in range(10):
@@ -50,38 +56,14 @@ class Detect3(smach.State):
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
 
-        shape_count = defaultdict(int)
-        for _ in range(20):
-            red_mask = get_red_mask_image_det()
-
-            shapes, moments = detect_shape(red_mask, threshold=500)
-            shape_moments = zip(shapes, moments)
-
-            largest_shape = Shapes.unknown
-            largest_mass = 0
-
-            for (shape, moment) in shape_moments:
-                if moment["m00"] > largest_mass:
-                    largest_mass = moment["m00"]
-                    largest_shape = shape
-
-            shape_count[largest_shape] += 1
-            self.rate.sleep()
-
-        discovered_shape = max(shape_count, key=shape_count.get)
-        print("Accumulation:")
-        print(shape_count)
-
-        if discovered_shape == the_shape and not found_flag:
-            """Found the correct shape."""
-            found_flag = True
-            display_count(3)
+        if the_shape == study_shapes(get_red_mask, min_samples=25):
+            # Found
             sound_msg = Sound()
             sound_msg.value = Sound.ON
             self.sound_pub.publish(sound_msg)
+            display_count(3)
         else:
-            led_msg = Led()
-            display_count(3, color_primary=Led.RED)
+            display_count(0)
 
         for _ in range(10):
             twist = Twist()

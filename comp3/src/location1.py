@@ -7,7 +7,12 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from kobuki_msgs.msg import Led, Sound
 
-from image_processing import get_red_mask, count_objects, detect_shape, get_red_mask_image_det
+from image_processing import (
+    get_red_mask,
+    count_objects,
+    detect_shape,
+    get_red_mask_image_det,
+)
 
 from utils import display_count
 
@@ -24,10 +29,11 @@ class TurnLeft1(smach.State):
 
 
 class Detect1(smach.State):
-    def __init__(self, rate, sound_pub):
+    def __init__(self, rate, sound_pub, light_pubs):
         smach.State.__init__(self, outcomes=["turn_right", "exit"])
         self.rate = rate
         self.sound_pub = sound_pub
+        self.light_pubs = light_pubs
 
     def execute(self, userdata):
         # TODO Add Detection
@@ -44,16 +50,16 @@ class Detect1(smach.State):
             # shapes, moments = detect_shape(red_mask, canvas)
             count = count_objects(red_mask)
             max_count = max(count, max_count)
-            
+
         cv2.imshow("redsmak", red_mask)
         cv2.waitKey(1000)
 
         # TODO: Show detection in lights
-        display_count(max_count)
+        display_count(max_count, self.light_pubs)
 
         sound_msg = Sound()
         sound_msg.value = Sound.ON
-        for i in range(max_count-1):
+        for i in range(max_count - 1):
             self.sound_pub.publish(sound_msg)
             for _ in range(8):
                 self.rate.sleep()

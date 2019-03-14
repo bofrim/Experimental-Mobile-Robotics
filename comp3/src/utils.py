@@ -30,10 +30,12 @@ def wait_for_odom_angle(timeout=None):
     return theta
 
 
-def display_count(count, color_primary=Led.GREEN, color_secondary=Led.BLACK):
-    light_pubs = []
-    light_pubs.append(rospy.Publisher("/mobile_base/commands/led1", Led, queue_size=1))
-    light_pubs.append(rospy.Publisher("/mobile_base/commands/led2", Led, queue_size=1))
+def display_count(
+    count, light_pubs, color_primary=Led.GREEN, color_secondary=Led.BLACK
+):
+    # light_pubs = []
+    # light_pubs.append(rospy.Publisher("/mobile_base/commands/led1", Led, queue_size=1))
+    # light_pubs.append(rospy.Publisher("/mobile_base/commands/led2", Led, queue_size=1))
 
     led_on_msg = Led()
     led_on_msg.value = color_primary
@@ -50,8 +52,8 @@ def display_count(count, color_primary=Led.GREEN, color_secondary=Led.BLACK):
     else:
         light_pubs[0].publish(led_off_msg)
 
-    light_pubs[0].unregister()
-    light_pubs[1].unregister()
+    # light_pubs[0].unregister()
+    # light_pubs[1].unregister()
 
 
 def angle_ramp(desired_angle, current_angle, scale=0.3, ramp_denominator=90):

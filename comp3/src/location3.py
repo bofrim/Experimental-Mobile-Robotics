@@ -25,6 +25,7 @@ found_flag = False
 
 g_turns = [69, 92, 80]
 
+
 class TurnLeft3(smach.State):
     def __init__(self, rate, pub_node):
         smach.State.__init__(self, outcomes=["detect3", "exit"])
@@ -39,11 +40,12 @@ class TurnLeft3(smach.State):
 
 
 class Detect3(smach.State):
-    def __init__(self, rate, pub_node, sound_pub):
+    def __init__(self, rate, pub_node, sound_pub, light_pubs):
         smach.State.__init__(self, outcomes=["turn_right3", "exit"])
         self.rate = rate
         self.sound_pub = sound_pub
         self.pub_node = pub_node
+        self.light_pubs = light_pubs
 
     def execute(self, userdata):
         global found_flag
@@ -56,7 +58,9 @@ class Detect3(smach.State):
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
 
-        new_shape = study_shapes(get_red_mask, min_samples=25, topic="usb_cam/image_raw")
+        new_shape = study_shapes(
+            get_red_mask, min_samples=25, topic="usb_cam/image_raw"
+        )
         print(the_shape, new_shape)
 
         if the_shape == new_shape:
@@ -64,9 +68,9 @@ class Detect3(smach.State):
             sound_msg = Sound()
             sound_msg.value = Sound.ON
             self.sound_pub.publish(sound_msg)
-            display_count(3)
+            display_count(3, self.light_pubs)
         else:
-            display_count(0)
+            display_count(0, self.light_pubs)
 
         for _ in range(10):
             twist = Twist()
@@ -75,7 +79,7 @@ class Detect3(smach.State):
             rospy.sleep(0.2)
 
         return "turn_right3"
-        
+
 
 class TurnRight3(smach.State):
     def __init__(self, rate, pub_node):

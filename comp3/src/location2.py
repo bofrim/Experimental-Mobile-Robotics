@@ -112,10 +112,11 @@ class DriveFromObjects(Drive):
 
 
 class Detect2(smach.State):
-    def __init__(self, rate):
+    def __init__(self, rate, light_pubs):
         smach.State.__init__(self, outcomes=["turn_180", "exit"])
         self.bridge = cv_bridge.CvBridge()
         self.rate = rate
+        self.light_pubs = light_pubs
 
     def execute(self, userdata):
         # Maybe do some corrections
@@ -123,7 +124,6 @@ class Detect2(smach.State):
         the_shape = study_shapes(
             get_green_mask, min_samples=50, max_samples=150, confidence=0.7
         )
-
 
         count_tally = {1: 0, 2: 0, 3: 0}
 
@@ -135,7 +135,7 @@ class Detect2(smach.State):
             count = count_objects(shape_mask, threshold=4000)
             if count in count_tally:
                 count_tally[count] += 1
-        display_count(max(count_tally))
+        display_count(max(count_tally), self.light_pubs)
         print(count_tally)
 
         print("Counted:", max(count_tally, key=count_tally.get))

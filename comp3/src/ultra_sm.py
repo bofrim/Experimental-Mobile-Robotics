@@ -51,6 +51,10 @@ def main():
 
     cmd_vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
+    light_pubs = []
+    light_pubs.append(rospy.Publisher("/mobile_base/commands/led1", Led, queue_size=1))
+    light_pubs.append(rospy.Publisher("/mobile_base/commands/led2", Led, queue_size=1))
+
     rate = rospy.Rate(10)
 
     with state_machine:
@@ -68,7 +72,7 @@ def main():
 
         smach.StateMachine.add(
             "AT_LINE",
-            AtLine(rate, initial_line=initial_line),
+            AtLine(rate, light_pubs=light_pubs, initial_line=initial_line),
             transitions={
                 "drive": "DRIVE",
                 "turn_left_1": "TURN_LEFT_1",
@@ -88,7 +92,7 @@ def main():
 
         smach.StateMachine.add(
             "DETECT1",
-            Detect1(rate, sound_pub),
+            Detect1(rate, sound_pub, light_pubs),
             transitions={"turn_right": "TURN_RIGHT", "exit": "exit"},
         )
 
@@ -112,7 +116,7 @@ def main():
 
         smach.StateMachine.add(
             "DETECT2",
-            Detect2(rate),
+            Detect2(rate, light_pubs),
             transitions={"turn_180": "TURN_180", "exit": "exit"},
         )
 
@@ -178,7 +182,7 @@ def main():
 
         smach.StateMachine.add(
             "DETECT3",
-            Detect3(rate, cmd_vel_pub, sound_pub),
+            Detect3(rate, cmd_vel_pub, sound_pub, light_pubs),
             transitions={"turn_right3": "TURN_RIGHT3", "exit": "exit"},
         )
 

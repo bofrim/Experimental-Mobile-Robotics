@@ -231,7 +231,7 @@ def right_most_object_coord(mask, threshold=100):
 
 def get_hsv_image(image=None, topic="camera/rgb/image_raw"):
     if image is None:
-        image = rospy.wait_for_message(topic, Image)
+        image = rospy.wait_for_message(topic, Image, timeout=0.4)
     bridge = cv_bridge.CvBridge()
     image = bridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
     return cv2.cvtColor(image, cv2.COLOR_BGR2HSV)

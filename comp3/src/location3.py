@@ -56,7 +56,10 @@ class Detect3(smach.State):
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
 
-        if the_shape == study_shapes(get_red_mask, min_samples=25):
+        new_shape = study_shapes(get_red_mask, min_samples=25, topic="usb_cam/image_raw")
+        print(the_shape, new_shape)
+
+        if the_shape == new_shape:
             # Found
             sound_msg = Sound()
             sound_msg.value = Sound.ON

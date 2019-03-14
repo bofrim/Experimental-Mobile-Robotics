@@ -14,8 +14,9 @@ class Shapes(Enum):
     pentagon = 5
     circle = 9
 
-RED_UPPER=[20, 255, 255]
-RED_LOWER=[317, 80, 80]
+
+RED_UPPER = [20, 255, 255]
+RED_LOWER = [317, 80, 80]
 RED_UPPER_IMG = [10, 255, 255]
 RED_LOWER_IMG = [335, 185, 50]
 GREEN_UPPER_180 = [75, 255, 255]
@@ -63,7 +64,7 @@ def hsv_bound(image, upper_bound, lower_bound, denoise=0, fill=0):
     )
 
 
-def detect_shape(mask, canvas=None, threshold=100):
+def detect_shape(mask, canvas=None, threshold=100, approx_factor=0.03):
     """Detect a shape contained in an image.
     
     Adapted from: https://stackoverflow.com/questions/11424002/how-to-detect-simple-geometric-shapes-using-opencv
@@ -73,7 +74,9 @@ def detect_shape(mask, canvas=None, threshold=100):
     _, contours, _ = cv2.findContours(mask, 1, 2)
     for cnt in contours:
         if cv2.moments(cnt)["m00"] > threshold:
-            approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+            approx = cv2.approxPolyDP(
+                cnt, approx_factor * cv2.arcLength(cnt, True), True
+            )
             if len(approx) == 3:
                 if canvas != None:
                     cv2.drawContours(canvas, [cnt], 0, (0, 255, 0), -1)
@@ -90,7 +93,7 @@ def detect_shape(mask, canvas=None, threshold=100):
                     cv2.drawContours(canvas, [cnt], 0, 255, -1)
                 detected_shapes.append(Shapes.pentagon)
                 moments.append(cv2.moments(cnt))
-            elif len(approx) > 9:
+            elif len(approx) >= 6:
                 if canvas != None:
                     cv2.drawContours(canvas, [cnt], 0, (0, 255, 255), -1)
                 detected_shapes.append(Shapes.circle)
@@ -98,7 +101,79 @@ def detect_shape(mask, canvas=None, threshold=100):
             else:
                 detected_shapes.append(Shapes.unknown)
                 moments.append(cv2.moments(cnt))
+    if canvas != None:
+        cv2.imshow("shape", canvas)
+        cv2.waitKey(1)
+
     return detected_shapes, moments
+
+
+def study_shapes(
+    mask_func,
+    min_samples=20,
+    max_samples=100,
+    confidence=0.5,
+    mass_threshold=1000,
+    rate=None,
+    topic="/camera/rgb/image_raw",
+    approx_factor=0.03,
+):
+    if rate is None:
+        rate = rospy.Rate(20)
+
+    sample_count = 1
+    square_count = 0
+    triangle_count = 0
+    circle_count = 0
+    print("start study")
+
+    while not rospy.is_shutdown():
+        mask = mask_func(topic=topic)
+        shapes, _ = detect_shape(
+            mask, threshold=mass_threshold, approx_factor=approx_factor
+        )
+        if len(shapes) != 1:
+            # Skip, there were too few or too many shapes
+            continue
+
+        if shapes[0] == Shapes.square:
+            print(
+                "square confidence: " + str(float(square_count) / float(sample_count))
+            )
+            square_count += 1
+        elif shapes[0] == Shapes.triangle:
+            print(
+                "triangle confidence: "
+                + str(float(triangle_count) / float(sample_count))
+            )
+            triangle_count += 1
+        elif shapes[0] == Shapes.circle:
+            print(
+                "circle confidence: " + str(float(circle_count) / float(sample_count))
+            )
+            circle_count += 1
+
+        if min_samples <= sample_count < max_samples:
+            if float(square_count) / float(sample_count) > confidence:
+                return Shapes.square
+            elif float(triangle_count) / float(sample_count) > confidence:
+                return Shapes.triangle
+            elif float(circle_count) / float(sample_count) > confidence:
+                return Shapes.circle
+        elif max_samples <= sample_count:
+            return Shapes.unknown
+
+        print(
+            str(sample_count)
+            + " / ["
+            + str(min_samples)
+            + ", "
+            + str(max_samples)
+            + "]"
+        )
+        sample_count += 1
+        rate.sleep()
+    print("stop study")
 
 
 def lowest_object_coord(mask, threshold=100):
@@ -117,6 +192,7 @@ def lowest_object_coord(mask, threshold=100):
             lowest_coord = (x, y)
     return lowest_coord
 
+
 def count_objects(mask, threshold=1000, canvas=None):
     """Count the number of distinct objects in the boolean image."""
     _, contours, _ = cv2.findContours(mask, 1, 2)
@@ -128,6 +204,7 @@ def count_objects(mask, threshold=1000, canvas=None):
             cy = int(moment["m01"] / moment["m00"])
             cv2.circle(canvas, (cx, cy), 20, (0, 0, 255), -1)
     return len(big_moments)
+
 
 def detect_green_shape(image=None):
     mask = get_green_mask(image)
@@ -152,22 +229,30 @@ def right_most_object_coord(mask, threshold=100):
     return right_most_coord
 
 
-def get_hsv_image(image=None):
+def get_hsv_image(image=None, topic="camera/rgb/image_raw"):
     if image is None:
-        image = rospy.wait_for_message("camera/rgb/image_raw", Image)
+        image = rospy.wait_for_message(topic, Image)
     bridge = cv_bridge.CvBridge()
     image = bridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
     return cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
 
-def get_red_mask(image=None):
-    return hsv_bound(get_hsv_image(image=image), RED_UPPER, RED_LOWER, 3, 6)
+def get_red_mask(image=None, topic="camera/rgb/image_raw"):
+    return hsv_bound(
+        get_hsv_image(image=image, topic=topic), RED_UPPER, RED_LOWER, 3, 6
+    )
 
-def get_red_mask_image_det(image=None):
-    return hsv_bound(get_hsv_image(image=image), RED_UPPER_IMG, RED_LOWER_IMG, 3, 6)
 
-def get_white_mask(image=None):
-    return hsv_bound(get_hsv_image(image=image), WHITE_UPPER, WHITE_LOWER, 3, 6)
+def get_red_mask_image_det(image=None, topic="camera/rgb/image_raw"):
+    return hsv_bound(
+        get_hsv_image(image=image, topic=topic), RED_UPPER_IMG, RED_LOWER_IMG, 3, 6
+    )
+
+
+def get_white_mask(image=None, topic="camera/rgb/image_raw"):
+    return hsv_bound(
+        get_hsv_image(image=image, topic=topic), WHITE_UPPER, WHITE_LOWER, 3, 6
+    )
 
 
 def get_green_mask(image=None):
@@ -184,15 +269,38 @@ def image_testing_callback(msg):
     image = bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
     red_mask = get_red_mask(image=msg)
     green_mask = get_green_mask(image=msg)
+    comb_mask = red_mask | green_mask
+
+    all_shapes, all_moments = detect_shape(mask=comb_mask, canvas=image, threshold=1000)
+    # big_moment = max(all_moments, key=lambda m: m["m00"])
+    # print(big_moment["m00"])
+    # # print(all_shapes, all_moments)
+
+    # green_shapes, green_moments = detect_shape(
+    #     mask=green_mask, canvas=image, threshold=1000
+    # )
+    # if len(green_shapes):
+    #     green_shape_moment = max(green_moments, key=lambda m: m["m00"])
+    #     green_shape_index = green_moments.index(green_shape_moment)
+    #     green_shape = green_shapes[green_shape_index]
+    #     print(green_shape, green_shape_moment["m00"])
+    # if len(all_shapes):
+    #     # print(all_shapes, all_moments)
+    #     pass
 
     cv2.imshow("red", red_mask)
     cv2.imshow("green", green_mask)
-    cv2.imshow("image", image)
+    cv2.imshow("comb", comb_mask)
     cv2.waitKey(1)
 
 
 if __name__ == "__main__":
     bridge = cv_bridge.CvBridge()
     rospy.init_node("img_proc")
-    image_sub = rospy.Subscriber("camera/rgb/image_raw", Image, image_testing_callback)
+    # image_sub = rospy.Subscriber("camera/rgb/image_raw", Image, image_testing_callback)
+    image_sub = rospy.Subscriber("usb_cam/image_raw", Image, image_testing_callback)
+    while True:
+        study_shapes(
+            get_red_mask, min_samples=30, topic="usb_cam/image_raw", approx_factor=0.02
+        )
     rospy.spin()

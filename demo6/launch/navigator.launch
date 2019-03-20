@@ -6,9 +6,7 @@
     <include file="$(find demo6)/launch/ar_track_topcam.launch"/>
     <include file="$(find demo6)/launch/odom_nav_demo.launch"/>
     <include file="$(find turtlebot_bringup)/launch/3dsensor.launch"/>
-    <include file="$(find turtlebot_bringup)/launch/minimal.launch"/>
-    <include file="$(find turtlebot_teleop)/launch/logitech.launch"/>
-      
+    <include file="$(find turtlebot_bringup)/launch/minimal.launch"/>      
 
     <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
         <param name="video_device" value="$(arg video_device)" />

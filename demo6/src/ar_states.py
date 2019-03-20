@@ -11,11 +11,11 @@ from ar_track_alvar_msgs.msg import AlvarMarker, AlvarMarkers
 from geometry_msgs.msg import Twist, Point, Quaternion
 from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from kobuki_msgs.msg import Led
+from kobuki_msgs.msg import Led, BumperEvent
 
 MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
-START_POSITION = (Point(0.000, 0.000, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
+START_POSITION = (Point(-0.3, 0.000, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
 
 class Survey(smach.State):
     def __init__(self, rate, pub_node):
@@ -84,13 +84,15 @@ class Approach(smach.State):
         )
 
         print("Approach with cmd_vel")
-        while self.target_marker.pose.pose.position.x > 2.0 and not rospy.is_shutdown():
+        while self.target_marker.pose.pose.position.x > 1.2 and not rospy.is_shutdown():
             direction = self.target_marker.pose.pose.position.y / abs(self.target_marker.pose.pose.position.y)
             msg = Twist()
             msg.angular.z = 0.2 * direction
-            msg.linear.x = 0.2
+            msg.linear.x = 0.3
             self.pub_node.publish(msg)
             print("Distance = ", self.target_marker.pose.pose.position.x)
+
+        rospy.sleep(0.2)
 
         print("Approach with planner")
         self.client.send_goal(self.calculate_target())
@@ -133,23 +135,37 @@ class Push(smach.State):
         smach.State.__init__(self, outcomes=["start"])
         self.rate = rate
         self.pub_node = pub_node
+        self.bumped = False
 
     def execute(self, userdata):
         ar_sub = rospy.Subscriber(
             MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
+        bumper_sub = rospy.Subscriber(
+            'mobile_base/events/bumper', BumperEvent, self.bump_callback
+        )
+
 
         twist = Twist()
         twist.linear.x = 0.3
 
-        for _ in range(0, 30):
+        for _ in range(0, 10):
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
+
+        # Keep pushing if the robot bumped into something (hopefully the box!)
+        if self.bumped:
+            for _ in range(0, 30):
+                self.pub_node.publish(twist)
+                rospy.sleep(0.2)
 
         return "start"
 
     def ar_callback(self, msg):
         return
+
+    def bump_callback(self, msg):
+        self.bumped = True
 
 class DriveToStart(smach.State):
     def __init__(self, rate, pub_node):

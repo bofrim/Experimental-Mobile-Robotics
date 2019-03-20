@@ -15,6 +15,7 @@ from kobuki_msgs.msg import Led
 
 MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
+START_POSITION = (Point(0.000, 0.000, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
 
 class Survey(smach.State):
     def __init__(self, rate, pub_node):
@@ -101,7 +102,7 @@ class Approach(smach.State):
     def calculate_target(self):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = self.target_marker_frame
-        goal.target_pose.pose.position = Point(0.0, 0.0, -0.8)
+        goal.target_pose.pose.position = Point(0, 0, -0.7)
         goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
         return goal
         
@@ -129,7 +130,7 @@ class Stop(smach.State):
 
 class Push(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["exit"])
+        smach.State.__init__(self, outcomes=["start"])
         self.rate = rate
         self.pub_node = pub_node
 
@@ -138,7 +139,31 @@ class Push(smach.State):
             MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
 
-        return "exit"
+        twist = Twist()
+        twist.linear.x = 0.3
+
+        for _ in range(0, 30):
+            self.pub_node.publish(twist)
+            rospy.sleep(0.2)
+
+        return "start"
 
     def ar_callback(self, msg):
         return
+
+class DriveToStart(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["survey"])
+        self.pub_node = pub_node
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.client.wait_for_server()
+        self.start_pose = MoveBaseGoal()
+        self.start_pose.target_pose.header.frame_id = 'odom'
+        self.start_pose.target_pose.pose.position = START_POSITION[0]
+        self.start_pose.target_pose.pose.orientation = START_POSITION[1]
+
+    def execute(self, userdata):
+        self.client.send_goal(self.start_pose)
+        self.client.wait_for_result()
+        
+        return "survey"

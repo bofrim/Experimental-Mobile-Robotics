@@ -5,7 +5,7 @@ import smach_ros
 
 from geometry_msgs.msg import Twist
 
-from ar_states import Survey, Approach, Stop, Push
+from ar_states import Survey, Approach, Stop, Push, DriveToStart
 
 def main():
     rospy.init_node("box_push")
@@ -41,7 +41,13 @@ def main():
         smach.StateMachine.add(
             "PUSH",
             Push(rate, cmd_vel_pub),
-            transitions={"exit": "exit"}
+            transitions={"start": "START"}
+        )
+
+        smach.StateMachine.add(
+            "START",
+            DriveToStart(rate, cmd_vel_pub),
+            transitions={"survey": "SURVEY"}
         )
 
     state_machine.execute()

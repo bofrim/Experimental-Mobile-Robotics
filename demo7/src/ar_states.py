@@ -4,6 +4,7 @@ import rospy
 import smach
 import smach_ros
 import time
+import tf
 
 from collections import OrderedDict
 
@@ -24,31 +25,51 @@ BOX_RIGHT_POSITION = (Point(0, 0.4, 0), Quaternion(0, 0, 0, 1))
 
 BOX_MARKER_ID = None
 
+g_target_location = (None, None)
 
-class FindTargetLogitech(smach.State):
+
+class FindTarget(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State._init_(self, outcomes=["approach"], output_keys=["target_marker"])
+        smach.State.__init__(self, outcomes=["start"])
         self.pub_node = pub_node
-        self.target_marker = None
+        self.rate = rate
+        self.listener = tf.TransformListener()
 
-    def excecute(self, userdata):
+    def execute(self, userdata):
         pass
 
 
-class FindTargetLogitech(smach.State):
+class FindTargetLogitech(FindTarget):
+    def __init__(self, rate, pub_node):
+        super(FindTargetLogitech, self).__init__(rate, pub_node)
+        self.target_found = False
+
+    def joy_callback(self, msg):
+        global g_target_location
+        # Buttons based on Controller "D" Mode
+        if msg.buttons[0]:  # X
+            g_target_location = self.listener.lookupTransform(
+                "/odom", "/base_link", rospy.Time(0)
+            )
+            self.target_found = True
+        elif msg.buttons[2]:  # B
+            rospy.signal_shutdown("User quit")
+
+    def execute(self, userdata):
+        joy_sub = rospy.Subscriber("joy", Joy, self.joy_callback, queue_size=1)
+        while not self.target_found and not rospy.is_shutdown():
+            self.rate.sleep()
+        print(g_target_location)
+        joy_sub.unregister()
+        return "start"
+
+
+class FindTargetAuto(FindTarget):
     def __init__(self, rate, pub_node):
         super(FindTargetLogitech, self).__init__(rate, pub_node)
 
-    def excecute(self, userdata):
-        pass
-
-
-class FindTargetAuto(smach.State):
-    def __init__(self, rate, pub_node):
-        super(FindTargetLogitech, self).__init__(rate, pub_node)
-
-    def excecute(self, userdata):
-        pass
+    def execute(self, userdata):
+        return "start"
 
 
 class DriveToStart(smach.State):

@@ -32,7 +32,7 @@ def main():
         smach.StateMachine.add(
             "LOCATE",
             FindTargetLogitech(rate, cmd_vel_pub),
-            transitions={"drive_to_start", "DRIVE_TO_START"},
+            transitions={"drive_to_start": "DRIVE_TO_START"},
         )
 
         smach.StateMachine.add(

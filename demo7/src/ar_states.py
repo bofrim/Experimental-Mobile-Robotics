@@ -30,13 +30,13 @@ g_target_location = (None, None)
 
 class FindTarget(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["start"])
+        smach.State.__init__(self, outcomes=["drive_to_start"])
         self.pub_node = pub_node
         self.rate = rate
         self.listener = tf.TransformListener()
 
     def execute(self, userdata):
-        pass
+        return "drive_to_start"
 
 
 class FindTargetLogitech(FindTarget):
@@ -61,7 +61,7 @@ class FindTargetLogitech(FindTarget):
             self.rate.sleep()
         print(g_target_location)
         joy_sub.unregister()
-        return "start"
+        return "drive_to_start"
 
 
 class FindTargetAuto(FindTarget):
@@ -92,7 +92,9 @@ class DriveToStart(smach.State):
 
 class Survey(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["approach_par"], output_keys=["box_marker"])
+        smach.State.__init__(
+            self, outcomes=["approach_par"], output_keys=["box_marker"]
+        )
         self.pub_node = pub_node
         self.box_marker = None
         self.ar_focus_id = -1
@@ -200,9 +202,7 @@ class PushParallel(smach.State):
         self.robot_pose = None
 
     def execute(self, userdata):
-        odom_sub = rospy.Subscriber(
-            "odom", Odometry, self.odom_callback
-        )
+        odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
         # TODO: Drive until you reach a certain position
         return "approach_perp"
 
@@ -223,9 +223,7 @@ class ApproachPerpendicular(smach.State):
         self.client.wait_for_server()
 
     def execute(self, userdata):
-        odom_sub = rospy.Subscriber(
-            "odom", Odometry, self.odom_callback
-        )
+        odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
 
         # curr_box_position = get_robot_pos + offset
         curr_position = None
@@ -249,7 +247,6 @@ class ApproachPerpendicular(smach.State):
         ar_sub.unregister()
         return "push_perp"
 
-
     def calculate_target(self, curr_position, goal_position):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = self.box_marker_frame
@@ -257,12 +254,10 @@ class ApproachPerpendicular(smach.State):
         goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
         return goal
 
-
     def ar_callback(self, msg):
         for marker in msg.markers:
             if marker.id == self.box_marker_id:
                 self.box_marker = marker
-
 
     def odom_callback(self, msg):
         self.robot_pose.pose = msg.pose

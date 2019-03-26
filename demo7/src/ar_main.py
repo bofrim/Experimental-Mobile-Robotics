@@ -6,14 +6,14 @@ import smach_ros
 from geometry_msgs.msg import Twist
 
 from ar_states import (
-    FindTarget,
     FindTargetLogitech,
     FindTargetAuto,
-    Survey,
-    Approach,
-    Stop,
-    Push,
     DriveToStart,
+    Survey,
+    ApproachParallel,
+    PushParallel,
+    ApproachPerpendicular,
+    PushPerpendicular,
 )
 
 
@@ -31,28 +31,33 @@ def main():
 
     with state_machine:
         smach.StateMachine.add(
-            "LOCATE", FindTarget(rate, cmd_vel_pub), transitions={"start", "START"}
+            "LOCATE", FindTargetLogitech(rate, cmd_vel_pub), transitions={"drive_to_start", "DRIVE_TO_START"}
         )
 
         smach.StateMachine.add(
-            "SURVEY", Survey(rate, cmd_vel_pub), transitions={"approach": "APPROACH"}
+            "DRIVE_TO_START", DriveToStart(rate, cmd_vel_pub), transitions={"survey": "SURVEY"}
         )
 
         smach.StateMachine.add(
-            "APPROACH", Approach(rate, cmd_vel_pub), transitions={"stop": "STOP"}
+            "SURVEY", Survey(rate, cmd_vel_pub), transitions={"approach_par": "APPROACH_PAR"}
         )
 
         smach.StateMachine.add(
-            "STOP", Stop(rate, cmd_vel_pub), transitions={"push": "PUSH"}
+            "APPROACH_PAR", ApproachParallel(rate, cmd_vel_pub), transitions={"push_par": "PUSH_PAR"}
         )
 
         smach.StateMachine.add(
-            "PUSH", Push(rate, cmd_vel_pub), transitions={"start": "START"}
+            "PUSH_PAR", PushParallel(rate, cmd_vel_pub), transitions={"approach_perp": "APPROACH_PERP"}
         )
 
         smach.StateMachine.add(
-            "START", DriveToStart(rate, cmd_vel_pub), transitions={"survey": "SURVEY"}
+            "APPROACH_PERP", ApproachPerpendicular(rate, cmd_vel_pub), transitions={"push_perp": "PUSH_PERP"}
         )
+
+        smach.StateMachine.add(
+            "PUSH_PERP", PushPerpendicular(rate, cmd_vel_pub), transitions={"complete": "complete"}
+        )
+
 
     state_machine.execute()
     state_introspection_server.stop()

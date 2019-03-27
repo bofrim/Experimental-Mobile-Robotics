@@ -17,7 +17,8 @@ from nav_msgs.msg import Odometry
 
 MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
-START_POSITION = (Point(-0.3, 0.000, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
+
+START_POSITION = (Point(0, 0, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
 BOX_FRONT_POSITION = (Point(0, 0, 0.1), Quaternion(0, 0, 0, 1))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, -0.4, 0), Quaternion(0, 0, 0, 1))
@@ -70,6 +71,24 @@ class FindTargetAuto(FindTarget):
 
     def execute(self, userdata):
         return "start"
+
+
+class DriveToStart(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["survey"])
+        self.pub_node = pub_node
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.client.wait_for_server()
+        self.start_pose = MoveBaseGoal()
+        self.start_pose.target_pose.header.frame_id = "odom"
+        self.start_pose.target_pose.pose.position = START_POSITION[0]
+        self.start_pose.target_pose.pose.orientation = START_POSITION[1]
+
+    def execute(self, userdata):
+        self.client.send_goal(self.start_pose)
+        self.client.wait_for_result()
+
+        return "survey"
 
 
 class DriveToStart(smach.State):
@@ -261,7 +280,6 @@ class ApproachPerpendicular(smach.State):
 
     def odom_callback(self, msg):
         self.robot_pose.pose = msg.pose
-
 
 class PushPerpendicular(smach.State):
     def __init__(self, rate, pub_node):

@@ -4,6 +4,7 @@ import rospy
 import smach
 import smach_ros
 import time
+import tf
 
 from collections import OrderedDict
 
@@ -16,6 +17,7 @@ from nav_msgs.msg import Odometry
 
 MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
+
 START_POSITION = (Point(0, 0, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
 BOX_FRONT_POSITION = (Point(0, 0, 0.1), Quaternion(0, 0, 0, 1))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
@@ -24,31 +26,69 @@ BOX_RIGHT_POSITION = (Point(0, 0.4, 0), Quaternion(0, 0, 0, 1))
 
 BOX_MARKER_ID = None
 
+g_target_location = (None, None)
 
-class FindTargetLogitech(smach.State):
+
+class FindTarget(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State._init_(self, outcomes=["approach"], output_keys=["target_marker"])
+        smach.State.__init__(self, outcomes=["drive_to_start"])
         self.pub_node = pub_node
-        self.target_marker = None
+        self.rate = rate
+        self.listener = tf.TransformListener()
 
-    def excecute(self, userdata):
-        pass
+    def execute(self, userdata):
+        return "drive_to_start"
 
 
-class FindTargetLogitech(smach.State):
+class FindTargetLogitech(FindTarget):
+    def __init__(self, rate, pub_node):
+        super(FindTargetLogitech, self).__init__(rate, pub_node)
+        self.target_found = False
+
+    def joy_callback(self, msg):
+        global g_target_location
+        # Buttons based on Controller "D" Mode
+        if msg.buttons[0]:  # X
+            g_target_location = self.listener.lookupTransform(
+                "/odom", "/base_link", rospy.Time(0)
+            )
+            self.target_found = True
+        elif msg.buttons[2]:  # B
+            rospy.signal_shutdown("User quit")
+
+    def execute(self, userdata):
+        joy_sub = rospy.Subscriber("joy", Joy, self.joy_callback, queue_size=1)
+        while not self.target_found and not rospy.is_shutdown():
+            self.rate.sleep()
+        print(g_target_location)
+        joy_sub.unregister()
+        return "drive_to_start"
+
+
+class FindTargetAuto(FindTarget):
     def __init__(self, rate, pub_node):
         super(FindTargetLogitech, self).__init__(rate, pub_node)
 
-    def excecute(self, userdata):
-        pass
+    def execute(self, userdata):
+        return "start"
 
 
-class FindTargetAuto(smach.State):
+class DriveToStart(smach.State):
     def __init__(self, rate, pub_node):
-        super(FindTargetLogitech, self).__init__(rate, pub_node)
+        smach.State.__init__(self, outcomes=["survey"])
+        self.pub_node = pub_node
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.client.wait_for_server()
+        self.start_pose = MoveBaseGoal()
+        self.start_pose.target_pose.header.frame_id = "odom"
+        self.start_pose.target_pose.pose.position = START_POSITION[0]
+        self.start_pose.target_pose.pose.orientation = START_POSITION[1]
 
-    def excecute(self, userdata):
-        pass
+    def execute(self, userdata):
+        self.client.send_goal(self.start_pose)
+        self.client.wait_for_result()
+
+        return "survey"
 
 
 class DriveToStart(smach.State):
@@ -71,7 +111,9 @@ class DriveToStart(smach.State):
 
 class Survey(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["approach_par"], output_keys=["box_marker"])
+        smach.State.__init__(
+            self, outcomes=["approach_par"], output_keys=["box_marker"]
+        )
         self.pub_node = pub_node
         self.box_marker = None
         self.ar_focus_id = -1
@@ -179,9 +221,7 @@ class PushParallel(smach.State):
         self.robot_pose = None
 
     def execute(self, userdata):
-        odom_sub = rospy.Subscriber(
-            "odom", Odometry, self.odom_callback
-        )
+        odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
         # TODO: Drive until you reach a certain position
         return "approach_perp"
 
@@ -202,9 +242,7 @@ class ApproachPerpendicular(smach.State):
         self.client.wait_for_server()
 
     def execute(self, userdata):
-        odom_sub = rospy.Subscriber(
-            "odom", Odometry, self.odom_callback
-        )
+        odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
 
         # curr_box_position = get_robot_pos + offset
         curr_position = None
@@ -228,7 +266,6 @@ class ApproachPerpendicular(smach.State):
         ar_sub.unregister()
         return "push_perp"
 
-
     def calculate_target(self, curr_position, goal_position):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = self.box_marker_frame
@@ -236,16 +273,13 @@ class ApproachPerpendicular(smach.State):
         goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
         return goal
 
-
     def ar_callback(self, msg):
         for marker in msg.markers:
             if marker.id == self.box_marker_id:
                 self.box_marker = marker
 
-
     def odom_callback(self, msg):
         self.robot_pose.pose = msg.pose
-
 
 class PushPerpendicular(smach.State):
     def __init__(self, rate, pub_node):

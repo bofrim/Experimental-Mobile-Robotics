@@ -28,7 +28,7 @@ BOX_FRONT_POSITION = (Point(0, 0, 0.1), Quaternion(0, 0, 0, 1))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, -0.4, 0), Quaternion(0, 0, 0, 1))
 BOX_RIGHT_POSITION = (Point(0, 0.4, 0), Quaternion(0, 0, 0, 1))
-TARGET_FRONT_POSITION = (Point(0, 0, 0.2), Quaternion(0, 0, 1, 0))
+TARGET_FRONT_POSITION = (Point(0, 0, 0.5), Quaternion(0, 0, 1, 0))
 
 BOX_MARKER_ID = None
 
@@ -73,85 +73,103 @@ class FindTargetLogitech(FindTarget):
 
 class FindTargetAuto(FindTarget):
     def __init__(self, rate, pub_node):
-        super(FindTargetLogitech, self).__init__(rate, pub_node)
+        super(FindTargetAuto, self).__init__(rate, pub_node)
         self.ar_focus_id = -1
         self.target_repetitions = 0
-        self.box_marker = None
+        self.target_marker = None
+        self.target_marker_frame = None
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
         self.scan_direction = 1
         self.disable_change_direction = True
+        self.found_target = False
 
     def execute(self, userdata):
-        survey_pose = MoveBaseGoal()
-        survey_pose.target_pose.header.frame_id = "base_link"
-        survey_pose.target_pose.pose.position = TARGET_SURVEY_POSITION[0]
-        survey_pose.target_pose.pose.orientation = TARGET_SURVEY_POSITION[1]
-        self.client.send_goal(self.start_pose)
-        self.client.wait_for_result()
+        # survey_pose = MoveBaseGoal()
+        # survey_pose.target_pose.header.frame_id = "base_link"
+        # survey_pose.target_pose.pose.position = TARGET_SURVEY_POSITION[0]
+        # survey_pose.target_pose.pose.orientation = TARGET_SURVEY_POSITION[1]
+        # self.client.send_goal(survey_pose)
+        # self.client.wait_for_result()
 
         ar_sub = rospy.Subscriber(
             MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
 
         while not rospy.is_shutdown():
-            if self.found_the_target():
+            self.found_target = self.found_the_target()
+            if self.found_target:
+                self.drive_within_range()
+                self.drive_to_target()
                 self.extract_target_location()
                 ar_sub.unregister()
                 return "drive_to_start"
 
             self.spin_a_bit()
-            rate.sleep()
+            self.rate.sleep()
 
     def extract_target_location(self):
-        self.drive_to_target()
         g_target_location = self.listener.lookupTransform(
             "/odom", "/base_link", rospy.Time(0)
         )
 
     def found_the_target(self):
         return (
-            self.box_marker
+            self.target_marker
             and self.target_repetitions >= 3
-            and -0.3 < self.box_marker.pose.pose.position.y < 0.3
+            and -0.6 < self.target_marker.pose.pose.position.y < 0.666
         )
 
     def spin_a_bit(self):
         curr_theta = wait_for_odom_angle()
         if abs(curr_theta) > 90 and not self.disable_change_direction:
             self.scan_direction *= -1
-            self.disable_change_dir = True
+            self.disable_change_direction = True
         if abs(curr_theta) < 80:
-            self.disable_change_dir = False
+            self.disable_change_direction = False
+
 
         twist_msg = Twist()
         twist_msg.angular.z = 0.3 * self.scan_direction
-
         self.pub_node.publish(twist_msg)
+
+    def drive_within_range(self):
+        while self.target_marker.pose.pose.position.x > 1.2 and not rospy.is_shutdown():
+            direction = self.target_marker.pose.pose.position.y / abs(
+                self.target_marker.pose.pose.position.y
+            )
+            msg = Twist()
+            msg.angular.z = 0.2 * direction
+            msg.linear.x = 0.3
+            self.pub_node.publish(msg)
 
     def drive_to_target(self):
         global g_target_location
         goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = self.box_marker_frame
+        goal.target_pose.header.frame_id = self.target_marker_frame
         goal.target_pose.pose.position = TARGET_FRONT_POSITION[0]
         goal.target_pose.pose.orientation = TARGET_FRONT_POSITION[1]
         self.client.send_goal(goal)
         self.client.wait_for_result()
 
     def ar_callback(self, msg):
+        #if not self.found_target:
         if not msg.markers:
             self.ar_focus_id = -1
             self.target_repetitions = 0
+            print("No markers")
             return
 
         for marker in msg.markers:
             if marker.id == self.ar_focus_id:
                 self.target_repetitions = self.target_repetitions + 1
+                print("got the marker")
             else:
                 self.ar_focus_id = marker.id
                 self.target_repetitions = 0
 
-            self.box_marker = marker
+            self.target_marker = marker
+            self.target_marker_frame = "ar_marker_" + str(marker.id)
             break
 
 

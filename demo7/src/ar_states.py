@@ -20,10 +20,7 @@ MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
 
 START_POSITION = (Point(0, 0, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
-TARGET_SURVEY_POSITION = (
-    Point(2, 0.000, 0.010),
-    Quaternion(0.000, 0.000, 0.3824995, 0.9239557),
-)
+SURVEY_DRIVE_BACK_POSITION = (Point(-3, 0.000, 0.010), Quaternion(0.000, 0.000, 0, 1))
 BOX_FRONT_POSITION = (Point(0, 0, 0.1), Quaternion(0, 0, 0, 1))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, -0.4, 0), Quaternion(0, 0, 0, 1))
@@ -87,8 +84,8 @@ class FindTargetAuto(FindTarget):
     def execute(self, userdata):
         # survey_pose = MoveBaseGoal()
         # survey_pose.target_pose.header.frame_id = "base_link"
-        # survey_pose.target_pose.pose.position = TARGET_SURVEY_POSITION[0]
-        # survey_pose.target_pose.pose.orientation = TARGET_SURVEY_POSITION[1]
+        # survey_pose.target_pose.pose.position = SURVEY_DRIVE_BACK_POSITION[0]
+        # survey_pose.target_pose.pose.orientation = SURVEY_DRIVE_BACK_POSITION[1]
         # self.client.send_goal(survey_pose)
         # self.client.wait_for_result()
 
@@ -202,6 +199,8 @@ class Survey(smach.State):
         self.target_repetitions = 0
         self.scan_direction = 1
         self.disable_change_direction = 1
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.client.wait_for_server()
 
     def execute(self, userdata):
         self.box_marker = None
@@ -211,10 +210,10 @@ class Survey(smach.State):
         )
 
         print("Look back")
-        self.look_back()
+        # self.look_back()
+        self.drive_back_a_bit()
         print("scan")
         self.scan_for_tag()
-        print("Done")
         userdata.box_marker = self.box_marker
         ar_sub.unregister()
         return "approach_par"
@@ -236,22 +235,43 @@ class Survey(smach.State):
                 return
 
     def spin_a_bit(self):
+        """Backwards: """
+        # curr_theta = wait_for_odom_angle()
+        # if abs(curr_theta) < 90 and not self.disable_change_direction:
+        #     self.scan_direction *= -1
+        #     self.disable_change_direction = True
+        # if abs(curr_theta) > 100:
+        #     self.disable_change_direction = False
+
+        # twist_msg = Twist()
+        # twist_msg.angular.z = 0.2 * self.scan_direction
+        # self.pub_node.publish(twist_msg)
+
+        """Forwards: """
         curr_theta = wait_for_odom_angle()
-        if abs(curr_theta) < 90 and not self.disable_change_direction:
+        if abs(curr_theta) > 90 and not self.disable_change_direction:
             self.scan_direction *= -1
             self.disable_change_direction = True
-        if abs(curr_theta) > 100:
+        if abs(curr_theta) < 80:
             self.disable_change_direction = False
 
         twist_msg = Twist()
-        twist_msg.angular.z = 0.3 * self.scan_direction
+        twist_msg.angular.z = 0.2 * self.scan_direction
         self.pub_node.publish(twist_msg)
+
+    def drive_back_a_bit(self):
+        survey_pose = MoveBaseGoal()
+        survey_pose.target_pose.header.frame_id = "odom"
+        survey_pose.target_pose.pose.position = SURVEY_DRIVE_BACK_POSITION[0]
+        survey_pose.target_pose.pose.orientation = SURVEY_DRIVE_BACK_POSITION[1]
+        self.client.send_goal(survey_pose)
+        self.client.wait_for_result()
 
     def box_found(self):
         return (
             self.box_marker
             and self.target_repetitions >= 3
-            and -0.5 < self.box_marker.pose.pose.position.y < 0.5
+            and -0.6 < self.box_marker.pose.pose.position.y < 0.6
         )
 
     def ar_callback(self, msg):
@@ -263,7 +283,9 @@ class Survey(smach.State):
         for marker in msg.markers:
             if marker.id == self.ar_focus_id:
                 self.target_repetitions = self.target_repetitions + 1
+                print("The marker", self.target_repetitions)
             else:
+                print("Not the marker", self.target_repetitions)
                 self.ar_focus_id = marker.id
                 self.target_repetitions = 0
 

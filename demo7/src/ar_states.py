@@ -37,13 +37,13 @@ g_target_location = (None, None)
 
 class FindTarget(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["drive_to_start"])
+        smach.State.__init__(self, outcomes=["survey"])
         self.pub_node = pub_node
         self.rate = rate
         self.listener = tf.TransformListener()
 
     def execute(self, userdata):
-        return "drive_to_start"
+        return "survey"
 
 
 class FindTargetLogitech(FindTarget):
@@ -68,7 +68,7 @@ class FindTargetLogitech(FindTarget):
             self.rate.sleep()
         print(g_target_location)
         joy_sub.unregister()
-        return "drive_to_start"
+        return "survey"
 
 
 class FindTargetAuto(FindTarget):
@@ -103,7 +103,7 @@ class FindTargetAuto(FindTarget):
                 self.drive_to_target()
                 self.extract_target_location()
                 ar_sub.unregister()
-                return "drive_to_start"
+                return "survey"
 
             self.spin_a_bit()
             self.rate.sleep()
@@ -172,24 +172,6 @@ class FindTargetAuto(FindTarget):
             break
 
 
-# class DriveToStart(smach.State):
-#     def __init__(self, rate, pub_node):
-#         smach.State.__init__(self, outcomes=["survey"])
-#         self.pub_node = pub_node
-#         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-#         self.client.wait_for_server()
-#         self.start_pose = MoveBaseGoal()
-#         self.start_pose.target_pose.header.frame_id = "odom"
-#         self.start_pose.target_pose.pose.position = START_POSITION[0]
-#         self.start_pose.target_pose.pose.orientation = START_POSITION[1]
-
-#     def execute(self, userdata):
-#         self.client.send_goal(self.start_pose)
-#         self.client.wait_for_result()
-
-#         return "survey"
-
-
 class DriveToStart(smach.State):
     def __init__(self, rate, pub_node):
         smach.State.__init__(self, outcomes=["survey"])
@@ -214,9 +196,12 @@ class Survey(smach.State):
             self, outcomes=["approach_par"], output_keys=["box_marker"]
         )
         self.pub_node = pub_node
+        self.rate = rate
         self.box_marker = None
         self.ar_focus_id = -1
         self.target_repetitions = 0
+        self.scan_direction = 1
+        self.disable_change_direction = 1
 
     def execute(self, userdata):
         self.box_marker = None
@@ -225,23 +210,49 @@ class Survey(smach.State):
             MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
 
+        print("Look back")
+        self.look_back()
+        print("scan")
+        self.scan_for_tag()
+        print("Done")
+        userdata.box_marker = self.box_marker
+        ar_sub.unregister()
+        return "approach_par"
+
+    def look_back(self):
         while not rospy.is_shutdown():
-
-            if (
-                self.box_marker
-                and self.target_repetitions >= 3
-                and -0.3 < self.box_marker.pose.pose.position.y
-                and self.box_marker.pose.pose.position.y < 0.3
-            ):
-                TARGET_BOX_MARKER = self.box_marker
-                ar_sub.unregister()
-                return "approach_par"
-
+            angle = wait_for_odom_angle()
+            if abs(angle) > 170:
+                return
             twist_msg = Twist()
-            twist_msg.angular.z = 0.3
-
+            twist_msg.angular.z = 0.8
             self.pub_node.publish(twist_msg)
-            rate.sleep()
+            self.rate.sleep()
+
+    def scan_for_tag(self):
+        while not rospy.is_shutdown():
+            self.spin_a_bit()
+            if self.box_found():
+                return
+
+    def spin_a_bit(self):
+        curr_theta = wait_for_odom_angle()
+        if abs(curr_theta) < 90 and not self.disable_change_direction:
+            self.scan_direction *= -1
+            self.disable_change_direction = True
+        if abs(curr_theta) > 100:
+            self.disable_change_direction = False
+
+        twist_msg = Twist()
+        twist_msg.angular.z = 0.3 * self.scan_direction
+        self.pub_node.publish(twist_msg)
+
+    def box_found(self):
+        return (
+            self.box_marker
+            and self.target_repetitions >= 3
+            and -0.5 < self.box_marker.pose.pose.position.y < 0.5
+        )
 
     def ar_callback(self, msg):
         if not msg.markers:
@@ -272,8 +283,8 @@ class ApproachParallel(smach.State):
         self.client.wait_for_server()
 
     def execute(self, userdata):
-        self.box_marker = TARGET_BOX_MARKER
-        self.box_marker_id = TARGET_BOX_MARKER.id
+        self.box_marker = userdata.box_marker
+        self.box_marker_id = userdata.box_marker.id
         self.box_marker_frame = "ar_marker_" + str(self.box_marker_id)
 
         ar_sub = rospy.Subscriber(

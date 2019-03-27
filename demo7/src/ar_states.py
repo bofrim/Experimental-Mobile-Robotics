@@ -299,7 +299,7 @@ class Survey(smach.State):
 
 class ApproachParallel(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["push_par"], input_keys=["box_marker"])
+        smach.State.__init__(self, outcomes=["push_par"], input_keys=["box_marker"], output_keys=["box_marker"])
         self.rate = rate
         self.pub_node = pub_node
         self.box_marker = None
@@ -313,22 +313,6 @@ class ApproachParallel(smach.State):
         self.box_marker_id = userdata.box_marker.id
         self.box_marker_frame = "ar_marker_" + str(self.box_marker_id)
 
-        ar_sub = rospy.Subscriber(
-            MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
-        )
-
-        print("Approach with cmd_vel")
-        while self.box_marker.pose.pose.position.x > 1.2 and not rospy.is_shutdown():
-            direction = self.box_marker.pose.pose.position.y / abs(
-                self.box_marker.pose.pose.position.y
-            )
-            msg = Twist()
-            msg.angular.z = 0.2 * direction
-            msg.linear.x = 0.3
-            self.pub_node.publish(msg)
-
-        rospy.sleep(0.2)
-
         print("Approach with planner")
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
@@ -339,19 +323,14 @@ class ApproachParallel(smach.State):
     def calculate_target(self):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = self.box_marker_frame
-        goal.target_pose.pose.position = BOX_FRONT_POSITION[0]
-        goal.target_pose.pose.orientation = BOX_FRONT_POSITION[1]
+        goal.target_pose.pose.position = BOX_BACK_POSITION[0]
+        goal.target_pose.pose.orientation = BOX_BACK_POSITION[1]
         return goal
-
-    def ar_callback(self, msg):
-        for marker in msg.markers:
-            if marker.id == self.box_marker_id:
-                self.box_marker = marker
 
 
 class PushParallel(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["approach_perp"])
+        smach.State.__init__(self, outcomes=["approach_perp"], input_keys=["box_marker"], output_keys=["box_marker"])
         self.rate = rate
         self.pub_node = pub_node
         self.robot_pose = None
@@ -373,6 +352,7 @@ class PushParallel(smach.State):
             self.pub_node.publish(back_twist)
             rospy.sleep(0.2)
 
+        odom_sub.unregister()
         return "approach_perp"
 
     def target_distance(self):
@@ -384,7 +364,7 @@ class PushParallel(smach.State):
 
 class ApproachPerpendicular(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["push_perp"])
+        smach.State.__init__(self, outcomes=["push_perp"], input_keys=["box_marker"])
         self.rate = rate
         self.pub_node = pub_node
         self.robot_pose = None
@@ -395,8 +375,8 @@ class ApproachPerpendicular(smach.State):
         self.client.wait_for_server()
 
     def execute(self, userdata):
-        self.box_marker = TARGET_BOX_MARKER
-        self.box_marker_id = TARGET_BOX_MARKER.id
+        self.box_marker = userdata.box_marker
+        self.box_marker_id = userdata.box_marker.id
         self.box_marker_frame = "ar_marker_" + str(self.box_marker_id)
 
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
@@ -408,6 +388,7 @@ class ApproachPerpendicular(smach.State):
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
 
+        odom_sub.unregister()
         ar_sub.unregister()
         return "push_perp"
 
@@ -442,5 +423,29 @@ class PushPerpendicular(smach.State):
         self.pub_node = pub_node
 
     def execute(self, userdata):
+        odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
+
+        twist = Twist()
+        twist.linear.x = 0.3
+
+        while -0.3 < target_distance() and target_distance() > 0.3:
+            print target_distance()
+            self.pub_node.publish(twist.linear.x)
+            ropsy.sleep(0.2)
+
+        back_twist = Twist()
+        back_twist.linear.x = -0.2
+        for _ in range(0, 25):
+            self.pub_node.publish(back_twist)
+            rospy.sleep(0.2)
+
+        odom_sub.unregister()
         return "complete"
+
+    def target_distance(self):
+        return g_target_location.position.y - self.robot_pose.position.y
+
+    def odom_callback(self, msg):
+        self.robot_pose = msg.pose.pose
+
 

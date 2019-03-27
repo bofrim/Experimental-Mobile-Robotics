@@ -14,10 +14,10 @@ from nav_msgs.msg import Odometry
 from ar_states import DriveToStart
 
 POSITIONS = [
+    (Point(0, -0.5, -0.25), Quaternion(0, 0, 0.70710678, 0.70710678)),
+    (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678)),
     (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1)),
     (Point(0, 0, 0.3), Quaternion(0, 0, 1, 0)),
-    (Point(0, -0.5, -0.25), Quaternion(0, 0, 0.70710678, 0.70710678)),
-    (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678))
 ]
 
 class BoxApproach(smach.State):
@@ -57,8 +57,9 @@ class BoxApproach(smach.State):
 
         back_twist = Twist()
         back_twist.linear.x = -0.2
-        for _ in range(0, 20):
+        for _ in range(0, 21):
             self.pub_node.publish(back_twist)
+            rospy.sleep(0.1)
 
         self.counter += 1
         ar_sub.unregister()

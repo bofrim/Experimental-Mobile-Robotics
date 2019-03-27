@@ -128,7 +128,6 @@ class FindTargetAuto(FindTarget):
         if abs(curr_theta) < 80:
             self.disable_change_direction = False
 
-
         twist_msg = Twist()
         twist_msg.angular.z = 0.3 * self.scan_direction
         self.pub_node.publish(twist_msg)
@@ -153,7 +152,7 @@ class FindTargetAuto(FindTarget):
         self.client.wait_for_result()
 
     def ar_callback(self, msg):
-        #if not self.found_target:
+        # if not self.found_target:
         if not msg.markers:
             self.ar_focus_id = -1
             self.target_repetitions = 0
@@ -173,22 +172,22 @@ class FindTargetAuto(FindTarget):
             break
 
 
-class DriveToStart(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["survey"])
-        self.pub_node = pub_node
-        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-        self.client.wait_for_server()
-        self.start_pose = MoveBaseGoal()
-        self.start_pose.target_pose.header.frame_id = "odom"
-        self.start_pose.target_pose.pose.position = START_POSITION[0]
-        self.start_pose.target_pose.pose.orientation = START_POSITION[1]
+# class DriveToStart(smach.State):
+#     def __init__(self, rate, pub_node):
+#         smach.State.__init__(self, outcomes=["survey"])
+#         self.pub_node = pub_node
+#         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+#         self.client.wait_for_server()
+#         self.start_pose = MoveBaseGoal()
+#         self.start_pose.target_pose.header.frame_id = "odom"
+#         self.start_pose.target_pose.pose.position = START_POSITION[0]
+#         self.start_pose.target_pose.pose.orientation = START_POSITION[1]
 
-    def execute(self, userdata):
-        self.client.send_goal(self.start_pose)
-        self.client.wait_for_result()
+#     def execute(self, userdata):
+#         self.client.send_goal(self.start_pose)
+#         self.client.wait_for_result()
 
-        return "survey"
+#         return "survey"
 
 
 class DriveToStart(smach.State):

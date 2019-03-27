@@ -4,27 +4,25 @@ import rospy
 import smach
 import smach_ros
 
-from geometry_msgs.msg import Twist
+from ar_track_alvar_msgs.msg import AlvarMarker, AlvarMarkers
+from geometry_msgs.msg import Twist, Point, Quaternion
+from sensor_msgs.msg import Joy
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from kobuki_msgs.msg import Led, BumperEvent
+from nav_msgs.msg import Odometry
 
-from ar_states import (
-    DriveToStart,
-    Survey,
-    ApproachParallel,
-    PushParallel,
-    ApproachPerpendicular,
-    PushPerpendicular,
-)
+from ar_states import DriveToStart
 
 POSITIONS = [
-    (Point(0, 0, 0.1), Quaternion(0, 0, 0, 1)),
     (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1)),
-    (Point(0, -0.4, 0), Quaternion(0, 0, 0, 1)),
-    (Point(0, 0.4, 0), Quaternion(0, 0, 0, 1))
+    (Point(0, 0, 0.3), Quaternion(0, 0, 1, 0)),
+    (Point(0, -0.5, -0.25), Quaternion(0, 0, 0.70710678, 0.70710678)),
+    (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678))
 ]
 
 class BoxApproach(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["push_par"], input_keys=["box_marker"])
+        smach.State.__init__(self, outcomes=["drive_to_start", "exit"])
         self.rate = rate
         self.pub_node = pub_node
         self.box_marker = None
@@ -35,24 +33,36 @@ class BoxApproach(smach.State):
         self.counter = 0 
 
     def execute(self, userdata):
-        self.box_marker = TARGET_BOX_MARKER
-        self.box_marker_id = TARGET_BOX_MARKER.id
-        self.box_marker_frame = "ar_marker_" + str(self.box_marker_id)
+        self.box_marker_id = None
+        self.box_marker = None
 
         ar_sub = rospy.Subscriber(
-            MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
+            "ar_pose_marker_mid", AlvarMarkers, self.ar_callback, queue_size=1
         )
 
-        while not self.box_marker:
+        while not self.box_marker_id and not rospy.is_shutdown():
             rospy.sleep(0.2)
 
+        self.box_marker_frame = "ar_marker_" + str(self.box_marker_id)
+        print "Frame " + self.box_marker_frame
+
+        if self.counter >= len(POSITIONS):
+            return "exit"
+            
         print("Approach with planner")
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
 
+        rospy.sleep(2.0)
+
+        back_twist = Twist()
+        back_twist.linear.x = -0.2
+        for _ in range(0, 20):
+            self.pub_node.publish(back_twist)
+
         self.counter += 1
         ar_sub.unregister()
-        return "push_par"
+        return "drive_to_start"
 
     def calculate_target(self):
         goal = MoveBaseGoal()
@@ -62,9 +72,12 @@ class BoxApproach(smach.State):
         return goal
 
     def ar_callback(self, msg):
-        for marker in msg.markers:
-            if marker.id == self.box_marker_id:
+        if not self.box_marker:
+            for marker in msg.markers:
                 self.box_marker = marker
+                self.box_marker_id = marker.id
+                return
+        return
 
 
 def main():
@@ -81,11 +94,11 @@ def main():
 
     with state_machine:
         smach.StateMachine.add(
-            "DRIVE_TO_START", DriveToStart(rate, cmd_vel_pub), transitions={"survey": "SURVEY"}
+            "SURVEY", BoxApproach(rate, cmd_vel_pub), transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"}
         )
 
         smach.StateMachine.add(
-            "SURVEY", BoxApproach(rate, cmd_vel_pub), transitions={"drive_to_start": "DRIVE_TO_START"}
+            "DRIVE_TO_START", DriveToStart(rate, cmd_vel_pub), transitions={"survey": "SURVEY"}
         )
 
 

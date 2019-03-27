@@ -5,7 +5,7 @@
     <include file="$(find demo7)/launch/ar_track_midcam.launch"/>
     <include file="$(find demo7)/launch/ar_track_topcam.launch"/>
     <include file="$(find demo7)/launch/odom_nav_demo.launch"/>
-    <include file="$(find turtlebot_bringup)/launch/3dsensor.launch"/>
+    <include file="$(find demo7)/launch/3dsensor.launch"/>
     <include file="$(find turtlebot_bringup)/launch/minimal.launch"/>      
 
     <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >

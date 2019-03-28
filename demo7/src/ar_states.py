@@ -359,7 +359,7 @@ class PushParallel(smach.State):
         twist = Twist()
         twist.linear.x = 0.3
 
-        while self.target_distance() > 0.3:
+        while self.target_distance() > 0.25:
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
 
@@ -433,12 +433,12 @@ class ApproachPerpendicular(smach.State):
     def ar_callback(self, msg):
         for marker in msg.markers:
             if marker.id == self.box_marker_id:
-                broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(m.id))
+                broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(marker.id))
                 self.waiting_for_ar = False
                 return
 
     def odom_callback(self, msg):
-        self.robot_pose.pose = msg.pose
+        self.robot_pose = msg.pose.pose
 
 
 class PushPerpendicular(smach.State):
@@ -454,8 +454,8 @@ class PushPerpendicular(smach.State):
         twist = Twist()
         twist.linear.x = 0.3
 
-        while -0.3 > self.target_distance() or self.target_distance() > 0.3:
-            self.pub_node.publish(twist.linear.x)
+        while -0.25 > self.target_distance() or self.target_distance() > 0.25:
+            self.pub_node.publish(twist)
             rospy.sleep(0.2)
 
         back_twist = Twist()

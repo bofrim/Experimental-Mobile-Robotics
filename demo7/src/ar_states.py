@@ -457,15 +457,31 @@ class PushPerpendicular(smach.State):
         smach.State.__init__(self, outcomes=["complete"])
         self.rate = rate
         self.pub_node = pub_node
+        self.curr_error = 0
+        self.prev_error = 0
+        self.cumm_error = 0
+        self.kp = -0.1
+        self.ki = -0.005
+        self.kd = -0.002
+        self.reference_angle = 0
 
     def execute(self, userdata):
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
-        rospy.wait_for_message("odom", Odometry)
+        curr_odom = rospy.wait_for_message("odom", Odometry)
+
+        self.curr_error = 0
+        self.prev_error = 0
+        self.cumm_error = 0
+        if curr_odom > 0:
+            self.reference_angle = 90
+        else:
+            self.reference_angel = -90
 
         twist = Twist()
         twist.linear.x = 0.3
 
         while -0.25 > self.target_distance() or self.target_distance() > 0.25:
+            twist.angular.z = self.kp * self.curr_error + self.ki * self.prev_error + self.kd * self.cumm_error
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
 
@@ -494,5 +510,10 @@ class PushPerpendicular(smach.State):
 
     def odom_callback(self, msg):
         self.robot_pose = msg.pose.pose
+        theta = extract_angle(msg.pose.pose)
+        delta_theta = self.reference_angle - theta
+        self.prev_error = self.curr_error
+        self.cumm_error += delta_theta
+        self.curr_error = delta_theta
 
 

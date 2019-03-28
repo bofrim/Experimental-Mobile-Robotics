@@ -14,7 +14,7 @@ from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, BumperEvent
 from nav_msgs.msg import Odometry
-from utils import wait_for_odom_angle, broadcast_box_sides
+from utils import wait_for_odom_angle, broadcast_box_sides, extract_angle
 
 MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
@@ -351,6 +351,12 @@ class PushParallel(smach.State):
         self.rate = rate
         self.pub_node = pub_node
         self.robot_pose = None
+        self.curr_error = 0
+        self.prev_error = 0
+        self.cumm_error = 0
+        self.kp = 0.1
+        self.ki = 0.05
+        self.kd = 0.02 
 
     def execute(self, userdata):
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
@@ -366,6 +372,7 @@ class PushParallel(smach.State):
         back_twist = Twist()
         back_twist.linear.x = -0.2
         for _ in range(0, 25):
+            back_twist.angular.z = self.kp * self.curr_error + self.ki * self.prev_error + self.kd * self.cumm_error
             self.pub_node.publish(back_twist)
             rospy.sleep(0.2)
 
@@ -379,6 +386,10 @@ class PushParallel(smach.State):
 
     def odom_callback(self, msg):
         self.robot_pose = msg.pose.pose
+        theta = extract_angle(msg.pose.pose)
+        self.prev_error = self.curr_error
+        self.cumm_error += theta
+        self.curr_error = theta
 
 
 class ApproachPerpendicular(smach.State):

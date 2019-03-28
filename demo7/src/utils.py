@@ -13,7 +13,11 @@ g_prev_err = 0
 
 def wait_for_odom_angle(timeout=None):
     odom = rospy.wait_for_message("odom", Odometry, timeout=timeout)
-    pose = numpify(odom.pose.pose)
+    return extract_angle(odom.pose.pose)
+
+
+def extract_angle(pose):
+    pose = numpify(pose)
     _, _, angles, _, _ = decompose_matrix(pose)
     theta = angles[2] * 180 / 3.14159
     return theta

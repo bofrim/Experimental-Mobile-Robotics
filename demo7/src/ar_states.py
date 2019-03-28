@@ -361,6 +361,7 @@ class PushParallel(smach.State):
     def execute(self, userdata):
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
         rospy.wait_for_message("odom", Odometry)
+        self.tartet_y = self.robot_pose.position.y
 
         twist = Twist()
         twist.linear.x = 0.3
@@ -386,10 +387,11 @@ class PushParallel(smach.State):
 
     def odom_callback(self, msg):
         self.robot_pose = msg.pose.pose
-        theta = extract_angle(msg.pose.pose)
+        # theta = extract_angle(msg.pose.pose)
+        delta_y = self.tartet_y - self.robot_pose.position.y
         self.prev_error = self.curr_error
-        self.cumm_error += theta
-        self.curr_error = theta
+        self.cumm_error += delta_y
+        self.curr_error = delta_y
 
 
 class ApproachPerpendicular(smach.State):

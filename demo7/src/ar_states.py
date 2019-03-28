@@ -20,7 +20,8 @@ MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
 
 START_POSITION = (Point(0, 0, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
-SURVEY_DRIVE_BACK_POSITION = (Point(-2.0, 0.000, 0.010), Quaternion(0.000, 0.000, 0, 1))
+SURVEY_DRIVE_BACK_POSITION_BACKWARDS = (Point(1.0, 0.000, 0.010), Quaternion(0.000, 0.000, 1, 0))
+SURVEY_DRIVE_BACK_POSITION_FOREWARDS = (Point(-2.0, 0.000, 0.010), Quaternion(0.000, 0.000, 0, 1))
 BOX_FRONT_POSITION = (Point(0, 0, 0.35), Quaternion(0, 0, 1, 0))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678))
@@ -238,34 +239,38 @@ class Survey(smach.State):
 
     def spin_a_bit(self):
         """Backwards: """
-        # curr_theta = wait_for_odom_angle()
-        # if abs(curr_theta) < 90 and not self.disable_change_direction:
-        #     self.scan_direction *= -1
-        #     self.disable_change_direction = True
-        # if abs(curr_theta) > 100:
-        #     self.disable_change_direction = False
-
-        # twist_msg = Twist()
-        # twist_msg.angular.z = 0.2 * self.scan_direction
-        # self.pub_node.publish(twist_msg)
-
-        """Forwards: """
         curr_theta = wait_for_odom_angle()
-        if abs(curr_theta) > 90 and not self.disable_change_direction:
+        if abs(curr_theta) < 90 and not self.disable_change_direction:
             self.scan_direction *= -1
             self.disable_change_direction = True
-        if abs(curr_theta) < 80:
+        if abs(curr_theta) > 100:
             self.disable_change_direction = False
 
         twist_msg = Twist()
         twist_msg.angular.z = 0.2 * self.scan_direction
         self.pub_node.publish(twist_msg)
 
+        """Forwards: """
+        # curr_theta = wait_for_odom_angle()
+        # if abs(curr_theta) > 90 and not self.disable_change_direction:
+        #     self.scan_direction *= -1
+        #     self.disable_change_direction = True
+        # if abs(curr_theta) < 80:
+        #     self.disable_change_direction = False
+
+        # twist_msg = Twist()
+        # twist_msg.angular.z = 0.2 * self.scan_direction
+        # self.pub_node.publish(twist_msg)
+
     def drive_back_a_bit(self):
         survey_pose = MoveBaseGoal()
         survey_pose.target_pose.header.frame_id = "odom"
-        survey_pose.target_pose.pose.position = SURVEY_DRIVE_BACK_POSITION[0]
-        survey_pose.target_pose.pose.orientation = SURVEY_DRIVE_BACK_POSITION[1]
+        """Backwards."""
+        survey_pose.target_pose.pose.position = SURVEY_DRIVE_BACK_POSITION_BACKWARDS[0]
+        survey_pose.target_pose.pose.orientation = SURVEY_DRIVE_BACK_POSITION_BACKWARDS[1]
+        """Forwards."""
+        # survey_pose.target_pose.pose.position = SURVEY_DRIVE_BACK_POSITION_FOREWARDS[0]
+        # survey_pose.target_pose.pose.orientation = SURVEY_DRIVE_BACK_POSITION_FOREWARDS[1]
         self.client.send_goal(survey_pose)
         self.client.wait_for_result()
 
@@ -307,23 +312,37 @@ class ApproachParallel(smach.State):
         self.br = tf.TransformBroadcaster()
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
+        self.waiting_for_ar = True
 
     def execute(self, userdata):
         self.box_marker = userdata.box_marker
         self.box_marker_id = userdata.box_marker.id
         self.box_marker_frame = "ar_marker_" + str(self.box_marker_id)
 
+        ar_sub = rospy.Subscriber(
+            "ar_pose_marker_mid", AlvarMarkers, self.ar_callback, queue_size=1
+        )
+
+        while self.waiting_for_ar:
+            rospy.sleep(0.1)
+
         print("Approach with planner")
-        self.client.send_goal(self.calculate_target())
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "box_front"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
         self.client.wait_for_result()
+
+        ar_sub.unregister()
         return "push_par"
 
-    def calculate_target(self):
-        goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = self.box_marker_frame
-        goal.target_pose.pose.position = BOX_BACK_POSITION[0]
-        goal.target_pose.pose.orientation = BOX_BACK_POSITION[1]
-        return goal
+    def ar_callback(self, msg):
+        for m in msg.markers:
+            if m.id ==  self.box_marker_id:
+                broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(m.id))
+                self.waiting_for_ar = False
+                return
 
 
 class PushParallel(smach.State):
@@ -340,9 +359,9 @@ class PushParallel(smach.State):
         twist = Twist()
         twist.linear.x = 0.3
 
-        while -0.3 < self.target_distance() and self.target_distance() > 0.3:
-            self.pub_node.publish(twist.linear.x)
-            ropsy.sleep(0.2)
+        while self.target_distance() > 0.25:
+            self.pub_node.publish(twist)
+            rospy.sleep(0.2)
 
         back_twist = Twist()
         back_twist.linear.x = -0.2
@@ -371,6 +390,9 @@ class ApproachPerpendicular(smach.State):
         self.box_marker = None
         self.box_marker_id = None
         self.box_marker_frame = None
+        self.waiting_for_ar = True
+        self.listen = tf.TransformListener()
+        self.br = tf.TransformBroadcaster()
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
 
@@ -381,42 +403,42 @@ class ApproachPerpendicular(smach.State):
 
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
         rospy.wait_for_message("odom", Odometry)
-        #ar_sub = rospy.Subscriber(
-        #    MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
-        #)
+        ar_sub = rospy.Subscriber(
+            "ar_pose_marker_mid", AlvarMarkers, self.ar_callback, queue_size=1
+        )
+
+        while self.waiting_for_ar:
+            rospy.sleep(0.1)
 
         print("Approach with planner")
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
 
-        odom_sub.unregister()
         ar_sub.unregister()
+        odom_sub.unregister()
         return "push_perp"
-
 
     def calculate_target(self):
         goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = self.box_marker_frame
-
         # CURRENT THOUGHT: +Y IS LEFT OF TURTLEBOT
         if g_target_location.position.y > self.robot_pose.position.y:
-            print "BOX IS LEFT OF TARGET"
-            goal.target_pose.pose.position = BOX_RIGHT_POSITION[0]
-            goal.target_pose.pose.orientation = BOX_RIGHT_POSITION[1]
+            goal.target_pose.header.frame_id = "box_right"
         else:
-            print "BOX IS RIGHT OF TARGET"
-            goal.target_pose.pose.position = BOX_LEFT_POSITION[0]
-            goal.target_pose.pose.orientation = BOX_LEFT_POSITION[1]
+            goal.target_pose.header.frame_id = "box_left"
 
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
         return goal
 
     def ar_callback(self, msg):
         for marker in msg.markers:
             if marker.id == self.box_marker_id:
-                self.box_marker = marker
+                broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(marker.id))
+                self.waiting_for_ar = False
+                return
 
     def odom_callback(self, msg):
-        self.robot_pose.pose = msg.pose
+        self.robot_pose = msg.pose.pose
 
 
 class PushPerpendicular(smach.State):
@@ -432,17 +454,26 @@ class PushPerpendicular(smach.State):
         twist = Twist()
         twist.linear.x = 0.3
 
-        while -0.3 < self.target_distance() and self.target_distance() > 0.3:
-            self.pub_node.publish(twist.linear.x)
-            ropsy.sleep(0.2)
+        while -0.25 > self.target_distance() or self.target_distance() > 0.25:
+            self.pub_node.publish(twist)
+            rospy.sleep(0.2)
 
         back_twist = Twist()
         back_twist.linear.x = -0.2
         for _ in range(0, 25):
             self.pub_node.publish(back_twist)
             rospy.sleep(0.2)
+        
+        print("Get outta heeeeaa.")
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "odom"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
 
         odom_sub.unregister()
+
         return "complete"
 
     def target_distance(self):

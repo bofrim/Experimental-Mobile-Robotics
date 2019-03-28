@@ -54,7 +54,7 @@ def broadcast_box_sides(
     listen,
     relative_frame_name,
     box_frame_prefix="box",
-    side_offset_from_middle=0.5,
+    side_offset_from_middle=0.7,
     middle_offset_from_relative=(0, 0, -0.25),
     relative_rotation=(0, 0, 1, 0),
 ):

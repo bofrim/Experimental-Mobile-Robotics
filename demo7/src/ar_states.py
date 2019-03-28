@@ -14,7 +14,7 @@ from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, BumperEvent
 from nav_msgs.msg import Odometry
-from utils import wait_for_odom_angle, broadcast_box_sides
+from utils import wait_for_odom_angle, broadcast_box_sides, extract_angle
 
 MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
@@ -351,6 +351,12 @@ class PushParallel(smach.State):
         self.rate = rate
         self.pub_node = pub_node
         self.robot_pose = None
+        self.curr_error = 0
+        self.prev_error = 0
+        self.cumm_error = 0
+        self.kp = -0.1
+        self.ki = -0.005
+        self.kd = -0.002 
 
     def execute(self, userdata):
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
@@ -359,7 +365,8 @@ class PushParallel(smach.State):
         twist = Twist()
         twist.linear.x = 0.3
 
-        while self.target_distance() > 0.25:
+        while self.target_distance() > 0.26 and not rospy.is_shutdown():
+            twist.angular.z = self.kp * self.curr_error + self.ki * self.prev_error + self.kd * self.cumm_error
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
 
@@ -379,6 +386,10 @@ class PushParallel(smach.State):
 
     def odom_callback(self, msg):
         self.robot_pose = msg.pose.pose
+        theta = extract_angle(msg.pose.pose)
+        self.prev_error = self.curr_error
+        self.cumm_error += theta
+        self.curr_error = theta
 
 
 class ApproachPerpendicular(smach.State):
@@ -465,12 +476,14 @@ class PushPerpendicular(smach.State):
             rospy.sleep(0.2)
         
         print("Get outta heeeeaa.")
+        '''
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "odom"
         goal.target_pose.pose.position = Point(0, 0, 0)
         goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
         self.client.send_goal(goal)
         self.client.wait_for_result()
+        '''
 
         odom_sub.unregister()
 

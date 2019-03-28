@@ -354,9 +354,9 @@ class PushParallel(smach.State):
         self.curr_error = 0
         self.prev_error = 0
         self.cumm_error = 0
-        self.kp = 0.1
-        self.ki = 0.05
-        self.kd = 0.02 
+        self.kp = -0.1
+        self.ki = -0.005
+        self.kd = -0.002 
 
     def execute(self, userdata):
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
@@ -365,14 +365,14 @@ class PushParallel(smach.State):
         twist = Twist()
         twist.linear.x = 0.3
 
-        while self.target_distance() > 0.25:
+        while self.target_distance() > 0.26 and not rospy.is_shutdown():
+            twist.angular.z = self.kp * self.curr_error + self.ki * self.prev_error + self.kd * self.cumm_error
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
 
         back_twist = Twist()
         back_twist.linear.x = -0.2
         for _ in range(0, 25):
-            back_twist.angular.z = self.kp * self.curr_error + self.ki * self.prev_error + self.kd * self.cumm_error
             self.pub_node.publish(back_twist)
             rospy.sleep(0.2)
 
@@ -476,12 +476,14 @@ class PushPerpendicular(smach.State):
             rospy.sleep(0.2)
         
         print("Get outta heeeeaa.")
+        '''
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "odom"
         goal.target_pose.pose.position = Point(0, 0, 0)
         goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
         self.client.send_goal(goal)
         self.client.wait_for_result()
+        '''
 
         odom_sub.unregister()
 

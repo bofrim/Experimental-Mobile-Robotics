@@ -3,6 +3,7 @@ import actionlib
 import rospy
 import smach
 import smach_ros
+import tf
 
 from ar_track_alvar_msgs.msg import AlvarMarker, AlvarMarkers
 from geometry_msgs.msg import Twist, Point, Quaternion
@@ -13,12 +14,15 @@ from nav_msgs.msg import Odometry
 
 from ar_states import DriveToStart
 
+from utils import broadcast_box_sides
+
 POSITIONS = [
     (Point(0, -0.5, -0.25), Quaternion(0, 0, 0.70710678, 0.70710678)),
     (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678)),
     (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1)),
     (Point(0, 0, 0.3), Quaternion(0, 0, 1, 0)),
 ]
+
 
 class BoxApproach(smach.State):
     def __init__(self, rate, pub_node):
@@ -30,47 +34,77 @@ class BoxApproach(smach.State):
         self.box_marker_frame = None
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
-        self.counter = 0 
+        self.counter = 0
+        self.listen = tf.TransformListener()
+        self.br = tf.TransformBroadcaster()
 
     def execute(self, userdata):
         self.box_marker_id = None
         self.box_marker = None
+        listen = tf.TransformListener()
+        br = tf.TransformBroadcaster()
 
         ar_sub = rospy.Subscriber(
             "ar_pose_marker_mid", AlvarMarkers, self.ar_callback, queue_size=1
         )
 
-        while not self.box_marker_id and not rospy.is_shutdown():
-            rospy.sleep(0.2)
-
-        self.box_marker_frame = "ar_marker_" + str(self.box_marker_id)
-        print "Frame " + self.box_marker_frame
-
-        if self.counter >= len(POSITIONS):
-            return "exit"
-            
-        print("Approach with planner")
-        self.client.send_goal(self.calculate_target())
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "box_front"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
         self.client.wait_for_result()
 
-        rospy.sleep(2.0)
-
-        back_twist = Twist()
-        back_twist.linear.x = -0.2
-        for _ in range(0, 21):
-            self.pub_node.publish(back_twist)
-            rospy.sleep(0.1)
-
-        self.counter += 1
-        ar_sub.unregister()
-        return "drive_to_start"
-
-    def calculate_target(self):
         goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = self.box_marker_frame
-        goal.target_pose.pose.position = POSITIONS[self.counter][0]
-        goal.target_pose.pose.orientation = POSITIONS[self.counter][1]
-        return goal
+        goal.target_pose.header.frame_id = "odom"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "box_left"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "odom"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "box_right"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "odom"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "box_back"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "odom"
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
+
+        return "drive_to_start"
 
     def ar_callback(self, msg):
         if not self.box_marker:
@@ -78,6 +112,11 @@ class BoxApproach(smach.State):
                 self.box_marker = marker
                 self.box_marker_id = marker.id
                 return
+        else:
+            broadcast_box_sides(
+                self.br, self.listen, "ar_marker_" + str(self.box_marker.id)
+            )
+
         return
 
 
@@ -95,13 +134,16 @@ def main():
 
     with state_machine:
         smach.StateMachine.add(
-            "SURVEY", BoxApproach(rate, cmd_vel_pub), transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"}
+            "SURVEY",
+            BoxApproach(rate, cmd_vel_pub),
+            transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"},
         )
 
         smach.StateMachine.add(
-            "DRIVE_TO_START", DriveToStart(rate, cmd_vel_pub), transitions={"survey": "SURVEY"}
+            "DRIVE_TO_START",
+            DriveToStart(rate, cmd_vel_pub),
+            transitions={"survey": "SURVEY"},
         )
-
 
     state_machine.execute()
     state_introspection_server.stop()

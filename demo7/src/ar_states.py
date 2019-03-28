@@ -26,7 +26,7 @@ BOX_FRONT_POSITION = (Point(0, 0, 0.35), Quaternion(0, 0, 1, 0))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678))
 BOX_RIGHT_POSITION = (Point(0, -0.5, -0.25), Quaternion(0, 0, 0.70710678, 0.70710678))
-TARGET_FRONT_POSITION = (Point(0, 0, 0.5), Quaternion(0, 0, 1, 0))
+TARGET_FRONT_POSITION = (Point(0, 0, 0.5), Quaternion(0, 0, 0, 1))
 
 g_target_location = Pose()
 
@@ -94,6 +94,8 @@ class FindTargetAuto(FindTarget):
             MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
 
+        self.drive_forward_a_bit()
+
         while not rospy.is_shutdown():
             self.found_target = self.found_the_target()
             if self.found_target:
@@ -133,8 +135,16 @@ class FindTargetAuto(FindTarget):
         twist_msg.angular.z = 0.3 * self.scan_direction
         self.pub_node.publish(twist_msg)
 
+    def drive_forward_a_bit(self):
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "odom"
+        goal.target_pose.pose.position = Point(2.0, 0, 0.010)
+        goal.target_pose.pose.orientation = Quaternion(0.000, 0.000, 0.000, 1.000)
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
+
     def drive_within_range(self):
-        while self.target_marker.pose.pose.position.x > 1.2 and not rospy.is_shutdown():
+        while self.target_marker.pose.pose.position.x > 1.6 and not rospy.is_shutdown():
             direction = self.target_marker.pose.pose.position.y / abs(
                 self.target_marker.pose.pose.position.y
             )
@@ -156,13 +166,11 @@ class FindTargetAuto(FindTarget):
         if not msg.markers:
             self.ar_focus_id = -1
             self.target_repetitions = 0
-            print("No markers")
             return
 
         for marker in msg.markers:
             if marker.id == self.ar_focus_id:
                 self.target_repetitions = self.target_repetitions + 1
-                print("got the marker")
             else:
                 self.ar_focus_id = marker.id
                 self.target_repetitions = 0
@@ -365,7 +373,7 @@ class PushParallel(smach.State):
         twist = Twist()
         twist.linear.x = 0.3
 
-        while self.target_distance() > 0.26 and not rospy.is_shutdown():
+        while self.target_distance() > 0.17 and not rospy.is_shutdown():
             twist.angular.z = self.kp * self.curr_error + self.ki * self.prev_error + self.kd * self.cumm_error
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
@@ -401,7 +409,7 @@ class ApproachPerpendicular(smach.State):
         self.box_marker = None
         self.box_marker_id = None
         self.box_marker_frame = None
-        self.waiting_for_ar = True
+        self.recalc_count = 0
         self.listen = tf.TransformListener()
         self.br = tf.TransformBroadcaster()
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
@@ -418,7 +426,7 @@ class ApproachPerpendicular(smach.State):
             "ar_pose_marker_mid", AlvarMarkers, self.ar_callback, queue_size=1
         )
 
-        while self.waiting_for_ar:
+        while self.recalc_count < 7:
             rospy.sleep(0.1)
 
         print("Approach with planner")
@@ -445,7 +453,7 @@ class ApproachPerpendicular(smach.State):
         for marker in msg.markers:
             if marker.id == self.box_marker_id:
                 broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(marker.id))
-                self.waiting_for_ar = False
+                self.recalc_count += 1
                 return
 
     def odom_callback(self, msg):
@@ -465,7 +473,7 @@ class PushPerpendicular(smach.State):
         twist = Twist()
         twist.linear.x = 0.3
 
-        while -0.25 > self.target_distance() or self.target_distance() > 0.25:
+        while -0.28 > self.target_distance() or self.target_distance() > 0.28:
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
 

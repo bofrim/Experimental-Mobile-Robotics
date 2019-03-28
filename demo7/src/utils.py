@@ -59,7 +59,7 @@ def broadcast_box_sides(
     relative_frame_name,
     box_frame_prefix="box",
     side_offset_from_middle=0.7,
-    middle_offset_from_relative=(0, 0, -0.25),
+    middle_offset_from_relative=(0, 0, -0.23),
     relative_rotation=(0, 0, 1, 0),
 ):
     # Publish a frame to the middle, relative to some other frame
@@ -104,7 +104,7 @@ def broadcast_box_sides(
             "odom",
         )
         print("done")
-    except ExtrapolationException as e:
+    except tf.ExtrapolationException as e:
         pass
 
 

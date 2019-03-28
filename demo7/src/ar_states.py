@@ -20,7 +20,8 @@ MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
 
 START_POSITION = (Point(0, 0, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
-SURVEY_DRIVE_BACK_POSITION = (Point(-2.0, 0.000, 0.010), Quaternion(0.000, 0.000, 0, 1))
+SURVEY_DRIVE_BACK_POSITION_BACKWARDS = (Point(1.0, 0.000, 0.010), Quaternion(0.000, 0.000, 1, 0))
+SURVEY_DRIVE_BACK_POSITION_FOREWARDS = (Point(-2.0, 0.000, 0.010), Quaternion(0.000, 0.000, 0, 1))
 BOX_FRONT_POSITION = (Point(0, 0, 0.35), Quaternion(0, 0, 1, 0))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678))
@@ -238,34 +239,38 @@ class Survey(smach.State):
 
     def spin_a_bit(self):
         """Backwards: """
-        # curr_theta = wait_for_odom_angle()
-        # if abs(curr_theta) < 90 and not self.disable_change_direction:
-        #     self.scan_direction *= -1
-        #     self.disable_change_direction = True
-        # if abs(curr_theta) > 100:
-        #     self.disable_change_direction = False
-
-        # twist_msg = Twist()
-        # twist_msg.angular.z = 0.2 * self.scan_direction
-        # self.pub_node.publish(twist_msg)
-
-        """Forwards: """
         curr_theta = wait_for_odom_angle()
-        if abs(curr_theta) > 90 and not self.disable_change_direction:
+        if abs(curr_theta) < 90 and not self.disable_change_direction:
             self.scan_direction *= -1
             self.disable_change_direction = True
-        if abs(curr_theta) < 80:
+        if abs(curr_theta) > 100:
             self.disable_change_direction = False
 
         twist_msg = Twist()
         twist_msg.angular.z = 0.2 * self.scan_direction
         self.pub_node.publish(twist_msg)
 
+        """Forwards: """
+        # curr_theta = wait_for_odom_angle()
+        # if abs(curr_theta) > 90 and not self.disable_change_direction:
+        #     self.scan_direction *= -1
+        #     self.disable_change_direction = True
+        # if abs(curr_theta) < 80:
+        #     self.disable_change_direction = False
+
+        # twist_msg = Twist()
+        # twist_msg.angular.z = 0.2 * self.scan_direction
+        # self.pub_node.publish(twist_msg)
+
     def drive_back_a_bit(self):
         survey_pose = MoveBaseGoal()
         survey_pose.target_pose.header.frame_id = "odom"
-        survey_pose.target_pose.pose.position = SURVEY_DRIVE_BACK_POSITION[0]
-        survey_pose.target_pose.pose.orientation = SURVEY_DRIVE_BACK_POSITION[1]
+        """Backwards."""
+        survey_pose.target_pose.pose.position = SURVEY_DRIVE_BACK_POSITION_BACKWARDS[0]
+        survey_pose.target_pose.pose.orientation = SURVEY_DRIVE_BACK_POSITION_BACKWARDS[1]
+        """Forwards."""
+        # survey_pose.target_pose.pose.position = SURVEY_DRIVE_BACK_POSITION_FOREWARDS[0]
+        # survey_pose.target_pose.pose.orientation = SURVEY_DRIVE_BACK_POSITION_FOREWARDS[1]
         self.client.send_goal(survey_pose)
         self.client.wait_for_result()
 

@@ -5,6 +5,8 @@ import smach
 import smach_ros
 import time
 import tf
+import numpy as np
+from math import exp
 
 from collections import OrderedDict
 
@@ -15,6 +17,9 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, BumperEvent
 from nav_msgs.msg import Odometry
 from utils import wait_for_odom_angle, broadcast_box_sides, extract_angle
+from s_curve_playground import SCurve
+
+from utils import broadcast_box_sides, wait_for_odom_angle, wait_for_target_deltas
 
 MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
@@ -29,6 +34,9 @@ BOX_RIGHT_POSITION = (Point(0, -0.5, -0.25), Quaternion(0, 0, 0.70710678, 0.7071
 TARGET_FRONT_POSITION = (Point(0, 0, 0.5), Quaternion(0, 0, 0, 1))
 
 g_target_location = Pose()
+
+def get_target_loc():
+    return g_target_location
 
 
 class FindTarget(smach.State):
@@ -310,7 +318,7 @@ class Survey(smach.State):
 
 class ApproachParallel(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["push_par"], input_keys=["box_marker"], output_keys=["box_marker"])
+        smach.State.__init__(self, outcomes=["push_par", "scurve"], input_keys=["box_marker"], output_keys=["box_marker"])
         self.rate = rate
         self.pub_node = pub_node
         self.box_marker = None
@@ -343,7 +351,8 @@ class ApproachParallel(smach.State):
         self.client.wait_for_result()
 
         ar_sub.unregister()
-        return "push_par"
+        # return "push_par"
+        return "scurve"
 
     def ar_callback(self, msg):
         for m in msg.markers:
@@ -504,3 +513,71 @@ class PushPerpendicular(smach.State):
         self.robot_pose = msg.pose.pose
 
 
+
+def calc_s_curve(dx, dy, dt, num_points=10):
+    """1/(1+EXP(-(X*10-5)))"""
+
+    def calc(x, y_scale):
+        return y_scale / (1 + exp(-1 * (x * 10 - 5)))
+
+    normal_xvals = np.linspace(0, 1, num_points)
+    yvals = [calc(x, dy) for x in normal_xvals]
+    xvals = normal_xvals * dx
+    return zip(xvals, yvals)
+
+
+def calc_ang_vel(dx, dy, dt, scale=0.7):
+    if dt < 0:
+        return -1 * scale
+    else:
+        return scale
+
+
+class SCurve(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["complete", "exit"])
+        self.rate = rate
+        self.pub_node = pub_node
+        # TODO: Get actual target
+        self.target_point = get_target_loc().position
+        self.listen = tf.TransformListener()
+
+    def execute(self, userdata):
+
+        # Get the deltas to target
+        targ_dx, targ_dy, targ_dt = wait_for_target_deltas(
+            self.target_point, listener=g_listen
+        )
+        print(targ_dx, targ_dy)
+
+        # Compute Waypoints
+        waypoints = calc_s_curve(targ_dx, targ_dy, targ_dt, 50)
+
+        for wp in waypoints:
+            print(wp)
+
+        # Drive
+        for (wp_x, wp_y) in waypoints:
+            print("Next Waypoint")
+            print(wp_x, wp_y)
+            # Get the deltas to waypoint
+            wp_dx, wp_dy, wp_dt = wait_for_target_deltas(
+                Point(wp_x, wp_y, 0), listener=self.listen
+            )
+            while not rospy.is_shutdown() and wp_dx > 0:
+                print(wp_dx, wp_dy, wp_dt)
+                # Drive
+                self.send_vel(wp_dx, wp_dy, wp_dt)
+                # Update the deltas to waypoint
+                wp_dx, wp_dy, wp_dt = wait_for_target_deltas(
+                    Point(wp_x, wp_y, 0), listener=self.listen
+                )
+                self.rate.sleep()
+
+        return "complete"
+
+    def send_vel(self, dx, dy, dt, linear_scale=0.3, angular_scale=0.3):
+        twist = Twist()
+        twist.linear.x = linear_scale
+        twist.angular.z = calc_ang_vel(dx, dy, dt, scale=angular_scale)
+        self.pub_node.publish(twist)

@@ -4,8 +4,9 @@ from geometry_msgs.msg import Twist
 from comp2.msg import Centroid
 from ros_numpy import numpify
 from nav_msgs.msg import Odometry
-from tf.transformations import decompose_matrix
+from tf.transformations import decompose_matrix, euler_from_quaternion
 import tf
+from math import sin, pi, exp
 
 
 g_prev_err = 0
@@ -14,6 +15,19 @@ g_prev_err = 0
 def wait_for_odom_angle(timeout=None):
     odom = rospy.wait_for_message("odom", Odometry, timeout=timeout)
     return extract_angle(odom.pose.pose)
+
+
+def wait_for_target_deltas(target_position, listener, frame_id="odom"):
+    odom = rospy.wait_for_message("odom", Odometry, timeout=20)
+    trans = odom.pose.pose.position
+    rot = odom.pose.pose.orientation
+    # trans, rot = listener.lookupTransform(frame_id, "base_link", rospy.Time(0))
+    theta_robot = euler_from_quaternion([rot.x, rot.y, rot.z, rot.w])[2]
+    delta_x = target_position.x - trans.x
+    delta_y = target_position.y - trans.y
+    theta_target = sin(delta_x / delta_y) * 180 / pi
+    delta_theta = theta_target - theta_robot
+    return delta_x, delta_y, delta_theta
 
 
 def extract_angle(pose):

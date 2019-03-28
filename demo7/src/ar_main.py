@@ -14,6 +14,7 @@ from ar_states import (
     PushParallel,
     ApproachPerpendicular,
     PushPerpendicular,
+    SCurve,
 )
 
 
@@ -50,7 +51,7 @@ def main():
         smach.StateMachine.add(
             "APPROACH_PAR",
             ApproachParallel(rate, cmd_vel_pub),
-            transitions={"push_par": "PUSH_PAR"},
+            transitions={"push_par": "PUSH_PAR", "scurve": "SCURVE"},
         )
 
         smach.StateMachine.add(
@@ -69,6 +70,11 @@ def main():
             "PUSH_PERP",
             PushPerpendicular(rate, cmd_vel_pub),
             transitions={"complete": "complete"},
+        )
+        smach.StateMachine.add(
+            "SCURVE",
+            SCurve(rate, cmd_vel_pub),
+            transitions={"complete": "complete", "exit": "exit"},
         )
 
     state_machine.execute()

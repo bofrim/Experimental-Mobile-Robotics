@@ -335,7 +335,7 @@ class ApproachParallel(smach.State):
     def ar_callback(self, msg):
         for m in msg.markers:
             if m.id ==  self.box_marker_id:
-                broadcast_box_sides(br, listen, "ar_marker_" + str(m.id))
+                broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(m.id))
                 self.waiting_for_ar = False
                 return
 
@@ -356,7 +356,7 @@ class PushParallel(smach.State):
 
         while self.target_distance() > 0.3:
             self.pub_node.publish(twist)
-            ropsy.sleep(0.2)
+            rospy.sleep(0.2)
 
         back_twist = Twist()
         back_twist.linear.x = -0.2
@@ -386,6 +386,8 @@ class ApproachPerpendicular(smach.State):
         self.box_marker_id = None
         self.box_marker_frame = None
         self.waiting_for_ar = True
+        self.listen = tf.TransformListener()
+        self.br = tf.TransformBroadcaster()
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
 
@@ -426,7 +428,7 @@ class ApproachPerpendicular(smach.State):
     def ar_callback(self, msg):
         for marker in msg.markers:
             if marker.id == self.box_marker_id:
-                broadcast_box_sides(br, listen, "ar_marker_" + str(m.id))
+                broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(m.id))
                 self.waiting_for_ar = False
                 return
 
@@ -449,7 +451,7 @@ class PushPerpendicular(smach.State):
 
         while -0.3 > self.target_distance() or self.target_distance() > 0.3:
             self.pub_node.publish(twist.linear.x)
-            ropsy.sleep(0.2)
+            rospy.sleep(0.2)
 
         back_twist = Twist()
         back_twist.linear.x = -0.2

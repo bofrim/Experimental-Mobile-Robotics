@@ -9,7 +9,7 @@ import tf
 from collections import OrderedDict
 
 from ar_track_alvar_msgs.msg import AlvarMarker, AlvarMarkers
-from geometry_msgs.msg import Twist, Point, Quaternion
+from geometry_msgs.msg import Twist, Point, Quaternion, Pose
 from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, BumperEvent
@@ -20,14 +20,12 @@ MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
 
 START_POSITION = (Point(0, 0, 0.010), Quaternion(0.000, 0.000, 0.000, 1.000))
-SURVEY_DRIVE_BACK_POSITION = (Point(-3, 0.000, 0.010), Quaternion(0.000, 0.000, 0, 1))
-BOX_FRONT_POSITION = (Point(0, 0, 0.1), Quaternion(0, 0, 0, 1))
+SURVEY_DRIVE_BACK_POSITION = (Point(-2.0, 0.000, 0.010), Quaternion(0.000, 0.000, 0, 1))
+BOX_FRONT_POSITION = (Point(0, 0, 0.35), Quaternion(0, 0, 1, 0))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678))
 BOX_RIGHT_POSITION = (Point(0, -0.5, -0.25), Quaternion(0, 0, 0.70710678, 0.70710678))
 TARGET_FRONT_POSITION = (Point(0, 0, 0.5), Quaternion(0, 0, 1, 0))
-
-BOX_MARKER_ID = None
 
 g_target_location = Pose()
 
@@ -316,15 +314,13 @@ class ApproachParallel(smach.State):
         print("Approach with planner")
         self.client.send_goal(self.calculate_target())
         self.client.wait_for_result()
-
-        ar_sub.unregister()
         return "push_par"
 
     def calculate_target(self):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = self.box_marker_frame
-        goal.target_pose.pose.position = BOX_BACK_POSITION[0]
-        goal.target_pose.pose.orientation = BOX_BACK_POSITION[1]
+        goal.target_pose.pose.position = BOX_FRONT_POSITION[0]
+        goal.target_pose.pose.orientation = BOX_FRONT_POSITION[1]
         return goal
 
 
@@ -337,12 +333,12 @@ class PushParallel(smach.State):
 
     def execute(self, userdata):
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
+        rospy.wait_for_message("odom", Odometry)
 
         twist = Twist()
         twist.linear.x = 0.3
 
-        while -0.3 < target_distance() and target_distance() > 0.3:
-            print target_distance()
+        while -0.3 < self.target_distance() and self.target_distance() > 0.3:
             self.pub_node.publish(twist.linear.x)
             ropsy.sleep(0.2)
 
@@ -356,7 +352,9 @@ class PushParallel(smach.State):
         return "approach_perp"
 
     def target_distance(self):
-        return g_target_location.position.x - self.robot_pose.position.x
+        difference = g_target_location.position.x - self.robot_pose.position.x
+        print "PAR DISTANCE: " + str(difference)
+        return difference
 
     def odom_callback(self, msg):
         self.robot_pose = msg.pose.pose
@@ -380,9 +378,10 @@ class ApproachPerpendicular(smach.State):
         self.box_marker_frame = "ar_marker_" + str(self.box_marker_id)
 
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
-        ar_sub = rospy.Subscriber(
-            MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
-        )
+        rospy.wait_for_message("odom", Odometry)
+        #ar_sub = rospy.Subscriber(
+        #    MIDCAM_AR_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
+        #)
 
         print("Approach with planner")
         self.client.send_goal(self.calculate_target())
@@ -399,9 +398,11 @@ class ApproachPerpendicular(smach.State):
 
         # CURRENT THOUGHT: +Y IS LEFT OF TURTLEBOT
         if g_target_location.position.y > self.robot_pose.position.y:
+            print "BOX IS LEFT OF TARGET"
             goal.target_pose.pose.position = BOX_RIGHT_POSITION[0]
             goal.target_pose.pose.orientation = BOX_RIGHT_POSITION[1]
         else:
+            print "BOX IS RIGHT OF TARGET"
             goal.target_pose.pose.position = BOX_LEFT_POSITION[0]
             goal.target_pose.pose.orientation = BOX_LEFT_POSITION[1]
 
@@ -424,12 +425,12 @@ class PushPerpendicular(smach.State):
 
     def execute(self, userdata):
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
+        rospy.wait_for_message("odom", Odometry)
 
         twist = Twist()
         twist.linear.x = 0.3
 
-        while -0.3 < target_distance() and target_distance() > 0.3:
-            print target_distance()
+        while -0.3 < self.target_distance() and self.target_distance() > 0.3:
             self.pub_node.publish(twist.linear.x)
             ropsy.sleep(0.2)
 

@@ -14,7 +14,7 @@ from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, BumperEvent
 from nav_msgs.msg import Odometry
-from utils import wait_for_odom_angle
+from utils import wait_for_odom_angle, broadcast_box_sides
 
 MIDCAM_AR_TOPIC = "ar_pose_marker_mid"
 TOPCAM_AR_TOPIC = "ar_pose_marker_top"
@@ -25,6 +25,7 @@ BOX_FRONT_POSITION = (Point(0, 0, 0.1), Quaternion(0, 0, 0, 1))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, -0.4, 0), Quaternion(0, 0, 0, 1))
 BOX_RIGHT_POSITION = (Point(0, 0.4, 0), Quaternion(0, 0, 0, 1))
+BOX_MIDDLE_OFFSET = ((0, 0, -0.25), (0, 0, 0, 1))
 TARGET_FRONT_POSITION = (Point(0, 0, 0.5), Quaternion(0, 0, 1, 0))
 
 BOX_MARKER_ID = None
@@ -301,6 +302,8 @@ class ApproachParallel(smach.State):
         self.box_marker = None
         self.box_marker_id = None
         self.box_marker_frame = None
+        self.listen = tf.TransformListener()
+        self.br = tf.TransformBroadcaster()
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
 
@@ -334,7 +337,7 @@ class ApproachParallel(smach.State):
 
     def calculate_target(self):
         goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = self.box_marker_frame
+        goal.target_pose.header.frame_id = "box_middle"
         goal.target_pose.pose.position = BOX_FRONT_POSITION[0]
         goal.target_pose.pose.orientation = BOX_FRONT_POSITION[1]
         return goal

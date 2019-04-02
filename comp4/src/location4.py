@@ -3,6 +3,8 @@ import actionlib
 import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 
+from utility_states import NavState, DriveState
+
 from comp2.msg import Centroid
 from general_states import Drive
 
@@ -59,6 +61,117 @@ class DriverRamp(Drive):
         pose_pub.unregister()
         white_line_sub.unregister()
         return "exit"
+
+
+class BoxSurvey(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["tag_scan_1", "exit"])
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.client.wait_for_server()
+
+    def execute(self, user_data):
+        # Drive to vantage point (box 5 facing left)
+        self.drive_to_vantage_point()
+        # Record box position and number
+        self.record_box()
+
+    def drive_to_vantage_point(self):
+        pass
+
+    def record_box(self):
+        pass
+
+
+class TagScan1(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["tag_scan_2", "push_right", "exit"])
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.client.wait_for_server()
+
+        self.found_target = False
+
+    def execute(self, user_data):
+        self.drive_to_scan_point()
+        self.scan()
+        if self.because_i_still_havent_found_what_im_looking_for():
+            return "tag_scan_2"
+        else:
+            return "push_right"
+
+    def drive_to_scan_point(self):
+        pass
+
+    def scan(self):
+        pass
+
+    def because_i_still_havent_found_what_im_looking_for(self):
+        return not self.found_target
+
+
+class TagScan2(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["tag_scan_1", "push_left", "exit"])
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.client.wait_for_server()
+
+        self.found_target = False
+
+    def execute(self, user_data):
+        self.drive_to_scan_point()
+        self.scan()
+        if self.because_i_still_havent_found_what_im_looking_for():
+            return "tag_scan_1"
+        else:
+            return "push_left"
+
+    def drive_to_scan_point(self):
+        pass
+
+    def scan(self):
+        pass
+
+    def because_i_still_havent_found_what_im_looking_for(self):
+        return not self.found_target
+
+
+class PushRight(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["todo", "exit"])
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.client.wait_for_server()
+        self.rate = rate
+        self.pub_node = pub_node
+
+    def execute(self, user_data):
+        self.drive_to_push_point()
+        self.push_to_goal()
+        return "todo set as the next state"
+
+    def drive_to_push_point(self):
+        pass
+
+    def push_to_goal(self):
+        pass
+
+
+class PushLeft(smach.State):
+    def __init__(self, rate, pub_node):
+        smach.State.__init__(self, outcomes=["todo", "exit"])
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.client.wait_for_server()
+        self.rate = rate
+        self.pub_node = pub_node
+
+    def execute(self, user_data):
+        self.drive_to_push_point()
+        self.push_to_goal()
+        return "todo set as the next state"
+
+    def drive_to_push_point(self):
+        pass
+
+    def push_to_goal(self):
+        pass
 
 
 class DriveToStart(smach.State):

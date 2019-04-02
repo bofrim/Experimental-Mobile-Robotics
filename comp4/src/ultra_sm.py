@@ -16,6 +16,11 @@ from location2 import (
 from location3 import TurnLeft3, Detect3, TurnRight3
 from location4 import (
     DriverRamp,
+    BoxSurvey,
+    TagScan1,
+    TagScan2,
+    PushLeft,
+    PushRight,
     DriveToStart,
     ArSurvey,
     ArApproach,
@@ -142,6 +147,44 @@ def main():
             "OFF_RAMP",
             DriverRamp(rate, cmd_vel_pub),
             transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "BOX_SURVEY",
+            BoxSurvey(rate, cmd_vel_pub),
+            transitions={"tag_scan_1": "TAG_SCAN_1", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "TAG_SCAN_1",
+            TagScan1(rate, cmd_vel_pub),
+            transitions={
+                "tag_scan_2": "TAG_SCAN_2",
+                "push_right": "PUSH_RIGHT",
+                "exit": "exit",
+            },
+        )
+
+        smach.StateMachine.add(
+            "PUSH_RIGHT",
+            PushRight(rate, cmd_vel_pub),
+            transitions={"change": "this", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "PUSH_LEFT",
+            PushLeft(rate, cmd_vel_pub),
+            transitions={"change": "this", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "TAG_SCAN_2",
+            TagScan2(rate, cmd_vel_pub),
+            transitions={
+                "tag_scan_1": "TAG_SCAN_1",
+                "push_left": "PUSH_LEFT",
+                "exit": "exit",
+            },
         )
 
         smach.StateMachine.add(

@@ -8,22 +8,17 @@ from sensor_msgs.msg import Image
 from kobuki_msgs.msg import Led
 from kobuki_msgs.msg import Sound
 
-from location2 import the_shape, get_the_shape
+from location2 import get_the_shape
 from image_processing import (
     get_red_mask,
     get_red_mask_image_det,
     detect_shape,
-    Shapes,
     study_shapes,
 )
 
 from utils import display_count
-
+from config_globals import *
 from collections import defaultdict
-
-found_flag = False
-
-g_turns = [69, 92, 92]
 
 
 class TurnLeft3(smach.State):
@@ -34,7 +29,7 @@ class TurnLeft3(smach.State):
         self.count = 0
 
     def execute(self, userdata):
-        simple_turn(g_turns[self.count], self.vel_pub)
+        simple_turn(g3_turns[self.count], self.vel_pub)
         self.count += 1
         return "detect3"
 
@@ -48,7 +43,7 @@ class Detect3(smach.State):
         self.light_pubs = light_pubs
 
     def execute(self, userdata):
-        global found_flag
+        global g3_found_flag
 
         twist = Twist()
         twist.linear.x = 0.2
@@ -63,8 +58,8 @@ class Detect3(smach.State):
         )
         print(get_the_shape(), new_shape)
 
-        if get_the_shape() == new_shape and found_flag == False:
-            found_flag = True
+        if get_the_shape() == new_shape and g3_found_flag == False:
+            g3_found_flag = True
             sound_msg = Sound()
             sound_msg.value = Sound.ON
             self.sound_pub.publish(sound_msg)
@@ -91,6 +86,6 @@ class TurnRight3(smach.State):
         self.count = 0
 
     def execute(self, userdata):
-        simple_turn(-g_turns[self.count], self.vel_pub)
+        simple_turn(-g3_turns[self.count], self.vel_pub)
         self.count += 1
         return "drive"

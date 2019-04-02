@@ -6,24 +6,7 @@ import cv_bridge
 from sensor_msgs.msg import Image
 from enum import Enum
 
-
-class Shapes(Enum):
-    unknown = -1
-    triangle = 3
-    square = 4
-    pentagon = 5
-    circle = 9
-
-
-RED_UPPER = [20, 255, 255]
-RED_LOWER = [317, 80, 80]
-RED_UPPER_IMG = [10, 255, 255]
-RED_LOWER_IMG = [335, 185, 50]
-GREEN_UPPER_180 = [75, 255, 255]
-GREEN_LOWER_180 = [48, 65, 101]
-WHITE_UPPER = [255, 10, 255]
-WHITE_LOWER = [0, 0, 185]
-
+from config_globals import *
 
 def threshold_hsv_360(hsv, h_max, h_min, s_max, s_min, v_max, v_min, denoise=0, fill=0):
     """Taken from:

@@ -13,7 +13,6 @@ from image_processing import (
     WHITE_LOWER,
 )
 
-
 class WhiteLineRampTracker:
     def __init__(self):
         self.bridge = cv_bridge.CvBridge()

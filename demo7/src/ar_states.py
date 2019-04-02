@@ -31,7 +31,7 @@ BOX_FRONT_POSITION = (Point(0, 0, 0.35), Quaternion(0, 0, 1, 0))
 BOX_BACK_POSITION = (Point(0, 0, -0.7), Quaternion(0, 0, 0, 1))
 BOX_LEFT_POSITION = (Point(0, 0.5, -0.25), Quaternion(0, 0, -0.70710678, 0.70710678))
 BOX_RIGHT_POSITION = (Point(0, -0.5, -0.25), Quaternion(0, 0, 0.70710678, 0.70710678))
-TARGET_FRONT_POSITION = (Point(0, 0, 0.5), Quaternion(0, 0, 0, 1))
+TARGET_FRONT_POSITION = (Point(0, 0, 0.9), Quaternion(0, 0, 0, 1))
 
 g_target_location = Pose()
 
@@ -546,7 +546,7 @@ class SCurve(smach.State):
 
         # Get the deltas to target
         targ_dx, targ_dy, targ_dt = wait_for_target_deltas(
-            self.target_point, listener=g_listen
+            self.target_point, listener=self.listen
         )
         print(targ_dx, targ_dy)
 

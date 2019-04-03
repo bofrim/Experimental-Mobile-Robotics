@@ -24,6 +24,8 @@ import cv_bridge
 import cv2
 from utils import display_count
 from config_globals import *
+from utility_control import PID
+
 
 def get_the_shape():
     global g2_the_shape
@@ -45,7 +47,7 @@ class TurnLeft2Start(smach.State):
 class DriveToObjects(Drive):
     def __init__(self, rate, pub_node):
         super(DriveToObjects, self).__init__(rate, pub_node, ["detect2", "exit"])
-        #self.pub_node = pub_node
+        # self.pub_node = pub_node
 
     def execute(self, userdata):
         global g2_the_shape
@@ -74,12 +76,11 @@ class DriveToObjects(Drive):
 
 class DriveFromObjects(Drive):
     def __init__(self, rate, pub_node):
-        super(DriveFromObjects, self).__init__(rate, pub_node, ["advance", "exit"])
+        pid = PID(kp=-0.00666, ki=-0.00444, kd=0, reference_value=0)
+        super(DriveFromObjects, self).__init__(rate, pub_node, pid, ["advance", "exit"])
 
     def execute(self, userdata):
         self.stop_distance = -1
-        prev_err = 0
-
         stop_sub = rospy.Subscriber(
             "red_line_distance", Centroid, self.red_line_callback
         )
@@ -95,23 +96,14 @@ class DriveFromObjects(Drive):
             if self.stop_distance > 350:
                 stop_sub.unregister()
                 image_sub.unregister()
-
                 return "advance"
-
-            curr_err = self.path_centroid.err
-
-            delta_err = curr_err - prev_err
 
             if self.path_centroid.cx == -1 or self.path_centroid.cy == -1:
                 twist_msg.linear.x = 0.075
                 twist_msg.angular.z = -0.2
             else:
                 twist_msg.linear.x = 0.25
-                twist_msg.angular.z = (-float(curr_err) / 150) + (
-                    -float(delta_err) / 225
-                )
-
-            prev_err = curr_err
+                twist_msg.angular.z = self.pid.output
 
             self.vel_pub.publish(twist_msg)
             self.rate.sleep()

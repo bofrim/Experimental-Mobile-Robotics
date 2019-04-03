@@ -12,37 +12,36 @@ from comp2.msg import Centroid
 from time import time
 from image_processing import get_white_mask
 from utils import display_count
+from utility_control import PID
 
 
 class Drive(smach.State):
-    def __init__(self, rate, pub_node, outcomes):
+    def __init__(self, rate, pub_node, pid, outcomes):
         smach.State.__init__(self, outcomes=outcomes)  # ["stop", "exit"])
         self.rate = rate
         self.vel_pub = pub_node
         self.stop_distance = -1
-        self.prev_err = 0
         self.twist = Twist()
         self.path_centroid = Centroid()
         self.stop_centroid = Centroid()
         self.speed = 0.3
+        self.pid = pid
 
     def red_line_callback(self, msg):
         self.stop_distance = msg.cy
         self.stop_centroid = msg
 
     def image_callback(self, msg):
-        curr_err = msg.err
+        self.pid.update_state(msg.err)
         self.path_centroid = msg
-
-        delta_err = curr_err - self.prev_err
         self.twist.linear.x = self.speed
-        self.twist.angular.z = (-float(curr_err) / 200) + (-float(delta_err) / 250)
-        self.prev_err = curr_err
+        self.twist.angular.z = self.pid.output
 
 
 class Driver(Drive):
     def __init__(self, rate, pub_node):
-        super(Driver, self).__init__(rate, pub_node, ["advance", "exit"])
+        pid = PID(kp=-0.005, ki=-0.00, kd=-0.004, reference_value=0)
+        super(Driver, self).__init__(rate, pub_node, pid, ["advance", "exit"])
 
     def execute(self, userdata):
         self.stop_distance = -1
@@ -54,12 +53,10 @@ class Driver(Drive):
         )
 
         while not rospy.is_shutdown():
-
             # TODO: Tweak this based on red line detection
             if self.stop_distance > 420:
                 stop_sub.unregister()
                 image_sub.unregister()
-
                 return "advance"
 
             self.vel_pub.publish(self.twist)
@@ -72,31 +69,17 @@ class Driver(Drive):
 
 class Advancer(Drive):
     def __init__(self, rate, pub_node):
-        super(Advancer, self).__init__(rate, pub_node, ["at_line", "exit"])
-        prev_stop_err = 0
+        pid = PID(kp=-0.00055, ki=-0.00, kd=-0.00055, reference_value=0)
+        super(Advancer, self).__init__(rate, pub_node, pid, ["at_line", "exit"])
 
     def execute(self, userdata):
-        prev_stop_err = 0
-        self.twist = Twist()
         red_line_sub = rospy.Subscriber(
             "red_line_distance", Centroid, self.red_line_callback
         )
         for _ in range(0, 11):
-            twist = Twist()
-
-            curr_err = self.stop_centroid.err
-            delta_err = curr_err - prev_stop_err
-            twist.linear.x = 0.3
-            twist.angular.z = (-float(curr_err) / 1800) + (-float(delta_err) / 1800)
-
-            prev_stop_err = curr_err
-            self.vel_pub.publish(twist)
+            self.vel_pub.publish(self.twist)
             self.rate.sleep()
-
-        for _ in range(10):
-            self.vel_pub.publish(Twist())
-            self.rate.sleep()
-
+        self.vel_pub.publish(Twist())
         red_line_sub.unregister()
         return "at_line"
 

@@ -148,8 +148,7 @@ def main():
         smach.StateMachine.add(
             "PUSH",
             Push(rate, cmd_vel_pub),
-            # transitions={"shape_scan": "SHAPE_SCAN", "exit": "exit"},
-            transitions={"exit": "exit"},
+            transitions={"shape_scan": "SHAPE_SCAN", "exit": "exit"},
         )
 
         smach.StateMachine.add(

@@ -139,7 +139,7 @@ class TagScan1(smach.State):
     def __init__(self, rate, pub_node):
         smach.State.__init__(
             self,
-            outcomes=["tag_scan_2", "push_right", "exit"],
+            outcomes=["tag_scan_2", "push", "exit"],
             output_keys=["ref_angle", "push_start_tf"],
         )
         self.rate = rate
@@ -208,7 +208,7 @@ class TagScan2(smach.State):
     def __init__(self, rate, pub_node):
         smach.State.__init__(
             self,
-            outcomes=["tag_scan_1", "push_left", "exit"],
+            outcomes=["tag_scan_1", "push", "exit"],
             output_keys=["ref_angle", "push_start_tf"],
         )
         self.rate = rate
@@ -275,9 +275,10 @@ class TagScan2(smach.State):
 
 class Push(smach.State):
     def __init__(self, rate, pub_node):
-        # smach.State.__init__(self, outcomes=["shape_scan", "exit"])
         smach.State.__init__(
-            self, outcomes=["exit"], input_keys=["push_start_tf", "ref_angle"]
+            self,
+            outcomes=["shape_scan", "exit"],
+            input_keys=["push_start_tf", "ref_angle"],
         )
         self.client = actionlib.SimpleActionClient("shape_scan", MoveBaseAction)
         self.client.wait_for_server()

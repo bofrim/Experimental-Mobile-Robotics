@@ -10,7 +10,7 @@ from location2 import (
     DriveFromObjects,
     Detect2,
 )
-from location3 import TurnLeft3, Detect3, TurnRight3
+from location3 import Detect3
 from location4 import (
     DriverRamp,
     BoxSurvey,

@@ -24,7 +24,7 @@ from collections import defaultdict
 class Detect3(smach.State):
     def __init__(self, rate, pub_node, sound_pub, light_pubs):
         self.next_states = ["turn_right_3_1", "turn_right_3_2", "turn_right_3_3"]
-        smach.State.__init__(self, outcomes=[*self.next_states, "exit"])
+        smach.State.__init__(self, outcomes=self.next_states + ["exit"])
         self.rate = rate
         self.sound_pub = sound_pub
         self.pub_node = pub_node

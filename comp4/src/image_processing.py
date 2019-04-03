@@ -115,26 +115,24 @@ def study_shapes(
         shapes, _ = detect_shape(
             mask, threshold=mass_threshold, approx_factor=approx_factor
         )
-        if len(shapes) != 1:
-            # Skip, there were too few or too many shapes
-            continue
 
-        if shapes[0] == Shapes.square:
-            print(
-                "square confidence: " + str(float(square_count) / float(sample_count))
-            )
-            square_count += 1
-        elif shapes[0] == Shapes.triangle:
-            print(
-                "triangle confidence: "
-                + str(float(triangle_count) / float(sample_count))
-            )
-            triangle_count += 1
-        elif shapes[0] == Shapes.circle:
-            print(
-                "circle confidence: " + str(float(circle_count) / float(sample_count))
-            )
-            circle_count += 1
+        if len(shapes) == 1:
+            if shapes[0] == Shapes.square:
+                print(
+                    "square confidence: " + str(float(square_count) / float(sample_count))
+                )
+                square_count += 1
+            elif shapes[0] == Shapes.triangle:
+                print(
+                    "triangle confidence: "
+                    + str(float(triangle_count) / float(sample_count))
+                )
+                triangle_count += 1
+            elif shapes[0] == Shapes.circle:
+                print(
+                    "circle confidence: " + str(float(circle_count) / float(sample_count))
+                )
+                circle_count += 1
 
         if min_samples <= sample_count < max_samples:
             if float(square_count) / float(sample_count) > confidence:

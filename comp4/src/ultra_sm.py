@@ -21,11 +21,8 @@ from location4 import (
     TagScan2,
     PushLeft,
     PushRight,
-    DriveToStart,
-    ArSurvey,
-    ArApproach,
-    ParkingSpot,
     OnRamp,
+    ShapeScan,
 )
 
 from general_states import Driver, Advancer, AtLine, TurnRight
@@ -40,11 +37,6 @@ def main():
         initial_line = rospy.get_param("~initial_line")
     else:
         initial_line = 0
-
-    if rospy.has_param("~parking"):
-        parking_spot = rospy.get_param("~parking")
-    else:
-        parking_spot = -1
 
     sound_pub = rospy.Publisher("/mobile_base/commands/sound", Sound, queue_size=1)
 
@@ -146,9 +138,10 @@ def main():
         smach.StateMachine.add(
             "OFF_RAMP",
             DriverRamp(rate, cmd_vel_pub),
-            transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"},
+            transitions={"start": "SHAPE_SCAN", "exit": "exit"},
         )
 
+        '''
         smach.StateMachine.add(
             "BOX_SURVEY",
             BoxSurvey(rate, cmd_vel_pub),
@@ -186,33 +179,15 @@ def main():
                 "exit": "exit",
             },
         )
+        '''
 
         smach.StateMachine.add(
-            "DRIVE_TO_START",
-            DriveToStart(rate, light_pubs),
+            "SHAPE_SCAN",
+            ShapeScan(rate, cmd_vel_pub, light_pubs),
             transitions={
-                "ar_survey": "AR_SURVEY",
-                "parking_spot": "PARKING_SPOT",
                 "on_ramp": "ON_RAMP",
-            },
-        )
-
-        smach.StateMachine.add(
-            "AR_SURVEY",
-            ArSurvey(rate, cmd_vel_pub),
-            transitions={"ar_approach": "AR_APPROACH", "exit": "exit"},
-        )
-
-        smach.StateMachine.add(
-            "AR_APPROACH",
-            ArApproach(rate, cmd_vel_pub, sound_pub, light_pubs),
-            transitions={"drive_to_start": "DRIVE_TO_START", "exit": "exit"},
-        )
-
-        smach.StateMachine.add(
-            "PARKING_SPOT",
-            ParkingSpot(rate, parking_spot, sound_pub, light_pubs),
-            transitions={"drive_to_start": "DRIVE_TO_START"},
+                "exit": "exit",
+            }
         )
 
         smach.StateMachine.add("ON_RAMP", OnRamp(rate), transitions={"drive": "DRIVE"})

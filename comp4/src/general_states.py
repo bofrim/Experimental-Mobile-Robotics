@@ -111,7 +111,9 @@ class AtLine(smach.State):
                 "turn_left_2_start",
                 "turn_left_2_end",
                 "off_ramp",
-                "turn_left_3",
+                "turn_left_3_1",
+                "turn_left_3_2",
+                "turn_left_3_3",
                 "exit",
             ],
         )
@@ -129,9 +131,9 @@ class AtLine(smach.State):
             5: "turn_left_2_end",
             6: "off_ramp",
             7: "drive",
-            8: "turn_left_3",
-            9: "turn_left_3",
-            10: "turn_left_3",
+            8: "turn_left_3_1",
+            9: "turn_left_3_2",
+            10: "turn_left_3_3",
             11: "exit",
         }
 
@@ -142,13 +144,13 @@ class AtLine(smach.State):
         return self.next_states[self.red_line_num]
 
 
-class TurnRight(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["drive", "exit"])
-        self.rate = rate
-        self.vel_pub = pub_node
+class Turn(smach.State):
+    def __init__(self, pub_node, turn_angle, next_state):
+        smach.State.__init__(self, outcomes=[next_state])
+        self.turn_angle = turn_angle
+        self.next_state = next_state
+        self.pub_node = pub_node
 
     def execute(self, userdata):
-        simple_turn(-84, self.vel_pub)
-        # turn_to_line(-84, self.vel_pub)
-        return "drive"
+        simple_turn(self.turn_angle, self.pub_node)
+        return self.next_state

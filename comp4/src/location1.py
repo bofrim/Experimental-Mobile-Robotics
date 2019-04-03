@@ -16,18 +16,6 @@ from image_processing import (
 
 from utils import display_count
 
-
-class TurnLeft1(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["detect1", "exit"])
-        self.rate = rate
-        self.vel_pub = pub_node
-
-    def execute(self, userdata):
-        simple_turn(63, self.vel_pub)
-        return "detect1"
-
-
 class Detect1(smach.State):
     def __init__(self, rate, sound_pub, light_pubs):
         smach.State.__init__(self, outcomes=["turn_right", "exit"])
@@ -36,7 +24,6 @@ class Detect1(smach.State):
         self.light_pubs = light_pubs
 
     def execute(self, userdata):
-        # TODO Add Detection
         max_count = 0
         for _ in range(7):
             image = rospy.wait_for_message("camera/rgb/image_raw", Image)
@@ -46,15 +33,12 @@ class Detect1(smach.State):
             search_bot = h
             red_mask[0:search_top, 0:w] = 0
             red_mask[search_bot:h, 0:w] = 0
-            # canvas = cv_bridge.CvBridge().imgmsg_to_cv2(image, desired_encoding="bgr8")
-            # shapes, moments = detect_shape(red_mask, canvas)
             count = count_objects(red_mask)
             max_count = max(count, max_count)
 
-        cv2.imshow("redsmak", red_mask)
+        cv2.imshow("redmask", red_mask)
         cv2.waitKey(1000)
 
-        # TODO: Show detection in lights
         display_count(max_count, self.light_pubs)
 
         sound_msg = Sound()

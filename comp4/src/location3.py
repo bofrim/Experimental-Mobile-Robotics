@@ -21,26 +21,15 @@ from config_globals import *
 from collections import defaultdict
 
 
-class TurnLeft3(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["detect3", "exit"])
-        self.rate = rate
-        self.vel_pub = pub_node
-        self.count = 0
-
-    def execute(self, userdata):
-        simple_turn(g3_turns[self.count], self.vel_pub)
-        self.count += 1
-        return "detect3"
-
-
 class Detect3(smach.State):
     def __init__(self, rate, pub_node, sound_pub, light_pubs):
-        smach.State.__init__(self, outcomes=["turn_right3", "exit"])
+        self.next_states = ["turn_right_3_1", "turn_right_3_2", "turn_right_3_3"]
+        smach.State.__init__(self, outcomes=[*self.next_states, "exit"])
         self.rate = rate
         self.sound_pub = sound_pub
         self.pub_node = pub_node
         self.light_pubs = light_pubs
+        self.count = 0
 
     def execute(self, userdata):
         global g3_found_flag
@@ -74,18 +63,7 @@ class Detect3(smach.State):
             twist.linear.x = -0.1
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
-
-        return "turn_right3"
-
-
-class TurnRight3(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["drive", "exit"])
-        self.rate = rate
-        self.vel_pub = pub_node
-        self.count = 0
-
-    def execute(self, userdata):
-        simple_turn(-g3_turns[self.count], self.vel_pub)
+        
+        next_state = self.next_states[self.count]
         self.count += 1
-        return "drive"
+        return next_state

@@ -30,18 +30,6 @@ def get_the_shape():
     return g2_the_shape
 
 
-class TurnLeft2Start(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["drive_to_objects", "exit"])
-        self.bridge = cv_bridge.CvBridge()
-        self.rate = rate
-        self.vel_pub = pub_node
-
-    def execute(self, userdata):
-        simple_turn(64, self.vel_pub)
-        return "drive_to_objects"
-
-
 class DriveToObjects(Drive):
     def __init__(self, rate, pub_node):
         super(DriveToObjects, self).__init__(rate, pub_node, ["detect2", "exit"])
@@ -161,30 +149,6 @@ class Detect2(smach.State):
         print("Counted:", max(count_tally, key=count_tally.get))
         print("The shape is: ", g2_the_shape)
         return "turn_180"
-
-
-class Turn180(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["drive_from_objects", "exit"])
-        self.bridge = cv_bridge.CvBridge()
-        self.rate = rate
-        self.vel_pub = pub_node
-
-    def execute(self, userdata):
-        simple_turn(180, self.vel_pub)
-        return "drive_from_objects"
-
-
-class TurnLeft2End(smach.State):
-    def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["drive", "exit"])
-        self.bridge = cv_bridge.CvBridge()
-        self.rate = rate
-        self.vel_pub = pub_node
-
-    def execute(self, userdata):
-        simple_turn(43, self.vel_pub)
-        return "drive"
 
 
 if __name__ == "__main__":

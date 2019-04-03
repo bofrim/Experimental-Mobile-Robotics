@@ -22,10 +22,12 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, Sound
 from utils import display_count
 from config_globals import *
+from utility_control import PID
 
 class DriverRamp(Drive):
     def __init__(self, rate, pub_node):
-        super(DriverRamp, self).__init__(rate, pub_node, ["drive_to_start", "exit"])
+        pid = PID(kp=-0.005, ki=-0.00, kd=-0.004, reference_value=0)
+        super(DriverRamp, self).__init__(rate, pub_node, pid, ["drive_to_start", "exit"])
 
     def execute(self, userdata):
         self.stop_distance = -1

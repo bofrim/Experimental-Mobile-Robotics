@@ -46,7 +46,8 @@ class TurnLeft2Start(smach.State):
 
 class DriveToObjects(Drive):
     def __init__(self, rate, pub_node):
-        super(DriveToObjects, self).__init__(rate, pub_node, ["detect2", "exit"])
+        pid = PID(kp=1, ki=0, kd=0, reference_value=0)
+        super(DriveToObjects, self).__init__(rate, pub_node, pid, ["detect2", "exit"])
         # self.pub_node = pub_node
 
     def execute(self, userdata):

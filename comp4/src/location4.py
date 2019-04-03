@@ -51,14 +51,14 @@ class DriverRamp(Drive):
                 initial_pose_cov.pose = initial_pose
                 initial_pose_cov_stamp.pose = initial_pose_cov
 
-                pose_pub.publish(initial_pose_cov_stamp)
-                rospy.loginfo(" ...Sent.")
+                for _ in range(0, 3):
+                    pose_pub.publish(initial_pose_cov_stamp)
+                    rospy.loginfo(" ...Sent.")
+                    rospy.sleep(0.3)
 
                 pose_pub.unregister()
                 white_line_sub.unregister()
                 return "start"
-
-            # TODO: Add in condition that robot takes the wrong path and sees a red line
 
             self.vel_pub.publish(self.twist)
             self.rate.sleep()

@@ -147,9 +147,10 @@ class AtLine(smach.State):
 class Turn(smach.State):
     def __init__(self, pub_node, turn_angle, next_state):
         smach.State.__init__(self, outcomes=[next_state])
+        self.turn_angle = turn_angle
         self.next_state = next_state
         self.pub_node = pub_node
 
     def execute(self, userdata):
-        simple_turn(turn_angle, self.pub_node)
+        simple_turn(self.turn_angle, self.pub_node)
         return self.next_state

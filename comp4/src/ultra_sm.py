@@ -5,22 +5,9 @@ import smach
 import smach_ros
 
 from location1 import Detect1
-from location2 import (
-    DriveToObjects,
-    DriveFromObjects,
-    Detect2,
-)
+from location2 import DriveToObjects, DriveFromObjects, Detect2
 from location3 import Detect3
-from location4 import (
-    DriverRamp,
-    BoxSurvey,
-    TagScan1,
-    TagScan2,
-    PushLeft,
-    PushRight,
-    OnRamp,
-    ShapeScan,
-)
+from location4 import DriverRamp, BoxSurvey, TagScan1, TagScan2, Push, OnRamp, ShapeScan
 
 from general_states import Driver, Advancer, AtLine, Turn
 from geometry_msgs.msg import Twist
@@ -140,7 +127,6 @@ def main():
             transitions={"start": "SHAPE_SCAN", "exit": "exit"},
         )
 
-        '''
         smach.StateMachine.add(
             "BOX_SURVEY",
             BoxSurvey(rate, cmd_vel_pub),
@@ -150,24 +136,19 @@ def main():
         smach.StateMachine.add(
             "TAG_SCAN_1",
             TagScan1(rate, cmd_vel_pub),
-            transitions={
-                "tag_scan_2": "TAG_SCAN_2",
-                "push_right": "PUSH_RIGHT",
-                "exit": "exit",
-            },
+            transitions={"tag_scan_2": "TAG_SCAN_2", "push": "PUSH", "exit": "exit"},
         )
 
         smach.StateMachine.add(
-            "PUSH_RIGHT",
-            PushRight(rate, cmd_vel_pub),
+            "TAG_SCAN_2",
+            TagScan2(rate, cmd_vel_pub),
+            transitions={"tag_scan_1": "TAG_SCAN_1", "push": "PUSH", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "PUSH",
+            Push(rate, cmd_vel_pub),
             # transitions={"shape_scan": "SHAPE_SCAN", "exit": "exit"},
-            transitions={"exit": "exit"},
-        )
-
-        smach.StateMachine.add(
-            "PUSH_LEFT",
-            PushLeft(rate, cmd_vel_pub),
-            # transitions={"SHAPE_SCAN": "SHAPE_SCAN", "exit": "exit"},
             transitions={"exit": "exit"},
         )
 
@@ -180,15 +161,11 @@ def main():
                 "exit": "exit",
             },
         )
-        '''
 
         smach.StateMachine.add(
             "SHAPE_SCAN",
             ShapeScan(rate, cmd_vel_pub, light_pubs),
-            transitions={
-                "on_ramp": "ON_RAMP",
-                "exit": "exit",
-            }
+            transitions={"on_ramp": "ON_RAMP", "exit": "exit"},
         )
 
         smach.StateMachine.add("ON_RAMP", OnRamp(rate), transitions={"drive": "DRIVE"})
@@ -210,7 +187,7 @@ def main():
             Turn(cmd_vel_pub, 92, "detect3"),
             transitions={"detect3": "DETECT3"},
         )
-        
+
         smach.StateMachine.add(
             "DETECT3",
             Detect3(rate, cmd_vel_pub, sound_pub, light_pubs),
@@ -218,7 +195,8 @@ def main():
                 "turn_right_3_1": "TURN_RIGHT_3_1",
                 "turn_right_3_2": "TURN_RIGHT_3_2",
                 "turn_right_3_3": "TURN_RIGHT_3_3",
-                "exit": "exit"},
+                "exit": "exit",
+            },
         )
 
         smach.StateMachine.add(

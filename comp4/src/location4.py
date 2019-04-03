@@ -78,13 +78,13 @@ class BoxSurvey(smach.State):
         self.client.wait_for_server()
         self.pub_node = pub_node
         self.rate = rate
+        self.ar_focus_id = -1
+        self.target_repetitions = 0
+        self.listen = tf.TransformListener()
+        self.br = tf.TransformBroadcaster()
         self.ar_sub = rospy.Subscriber(
             MARKER_POSE_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
-        self.ar_focus_id = -1
-        self.target_repetitions
-        self.listen = tf.TransformListener()
-        self.br = tf.TransformBroadcaster()
 
     def execute(self, user_data):
         self.drive_to_vantage_point()
@@ -137,7 +137,11 @@ class BoxSurvey(smach.State):
 
 class TagScan1(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["tag_scan_2", "push_right", "exit"])
+        smach.State.__init__(
+            self,
+            outcomes=["tag_scan_2", "push_right", "exit"],
+            output_keys=["ref_angle", "push_start_tf"],
+        )
         self.rate = rate
         self.pub_node = pub_node
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
@@ -153,7 +157,9 @@ class TagScan1(smach.State):
         if self.because_i_still_havent_found_what_im_looking_for():
             return "tag_scan_2"
         else:
-            return "push_right"
+            user_data.ref_angle = -90
+            user_data.push_start_tf = "box_left"
+            return "push"
 
     def drive_to_scan_point(self):
         goal_pose = MoveBaseGoal()
@@ -200,7 +206,11 @@ class TagScan1(smach.State):
 
 class TagScan2(smach.State):
     def __init__(self, rate, pub_node):
-        smach.State.__init__(self, outcomes=["tag_scan_1", "push_left", "exit"])
+        smach.State.__init__(
+            self,
+            outcomes=["tag_scan_1", "push_left", "exit"],
+            output_keys=["ref_angle", "push_start_tf"],
+        )
         self.rate = rate
         self.pub_node = pub_node
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
@@ -216,7 +226,9 @@ class TagScan2(smach.State):
         if self.because_i_still_havent_found_what_im_looking_for():
             return "tag_scan_1"
         else:
-            return "push_left"
+            user_data.ref_angle = -90
+            user_data.push_start_tf = "box_left"
+            return "push"
 
     def drive_to_scan_point(self):
         goal_pose = MoveBaseGoal()
@@ -261,66 +273,38 @@ class TagScan2(smach.State):
             break
 
 
-class PushRight(smach.State):
+class Push(smach.State):
     def __init__(self, rate, pub_node):
         # smach.State.__init__(self, outcomes=["shape_scan", "exit"])
-        smach.State.__init__(self, outcomes=["exit"])
+        smach.State.__init__(
+            self, outcomes=["exit"], input_keys=["push_start_tf", "ref_angle"]
+        )
         self.client = actionlib.SimpleActionClient("shape_scan", MoveBaseAction)
         self.client.wait_for_server()
         self.rate = rate
         self.pub_node = pub_node
-        self.pid = PID(kp=-0.1, ki=-0.05, kd=-0.02, reference_value=-90)
+        self.pid = PID(kp=-0.1, ki=-0.05, kd=-0.02, reference_value=0)
         self.distance_to_target = 1000
 
     def execute(self, user_data):
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
         rospy.wait_for_message("odom", Odometry)
-        self.drive_to_push_point()
+        self.pid.ref = user_data.ref_angle
+        self.drive_to_push_point(user_data.push_start_tf)
         self.push_to_goal()
         odom_sub.unregister()
         return "shape_scan"
 
-    def drive_to_push_point(self):
+    def drive_to_push_point(self, target_frame_id):
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = target_frame_id
+        goal.target_pose.pose.position = Point(0, 0, 0)
+        goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        self.client.send_goal(self.calculate_target())
+        self.client.wait_for_result()
         while self.pid.output > 4:
             theta = wait_for_odom_angle()
-            self.pid.update_state(value=theat)
-            twist = Twist()
-            twist.angular = self.pid.output
-
-    def push_to_goal(self):
-        while self.distance_to_target > 0:
-            theta = wait_for_odom_angle()
-            twist = Twist()
-            twist.linear = SPEED
-            twist.angular = self.pid.output
-
-    def odom_callback(self, msg):
-        robot_pose = msg.pose.pose
-        theta = extract_angle(msg.pose.pose)
-        self.pid.update_state(value=theata)
-        self.distance_to_target = g_target_location.position.y - robot_pose.position.y
-
-
-class PushLeft(smach.State):
-    def __init__(self, rate, pub_node):
-        # smach.State.__init__(self, outcomes=["shape_scan", "exit"])
-        smach.State.__init__(self, outcomes=["exit"])
-        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-        self.client.wait_for_server()
-        self.rate = rate
-        self.pub_node = pub_node
-        self.pid = PID(kp=-0.1, ki=-0.05, kd=-0.02, reference_value=90)
-        self.distance_to_target = 1000
-
-    def execute(self, user_data):
-        self.drive_to_push_point()
-        self.push_to_goal()
-        return "shape_scan"
-
-    def drive_to_push_point(self):
-        while self.pid.output > 4:
-            theta = wait_for_odom_angle()
-            self.pid.update_state(value=theat)
+            self.pid.update_state(value=theata)
             twist = Twist()
             twist.angular = self.pid.output
 

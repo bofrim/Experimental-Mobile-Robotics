@@ -19,60 +19,7 @@ from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, Sound
 from utils import display_count
-
-MARKER_POSE_TOPIC = "ar_pose_marker"
-
-WAYPOINT_MAP = {
-    "off_ramp": (
-        Point(-0.04193958488532269, -0.08882399277556528, 0.010199999999999999),
-        Quaternion(0.0, 0.0, 0.34350948056213637, 0.9391492089992576),
-    ),
-    "1": (
-        Point(1.4128346917258936, 3.0314988225881017, 0.0102),
-        Quaternion(0.0, 0.0, 0.11511062216559612, 0.9933526788933774),
-    ),
-    "2": (
-        Point(1.4974838033521558, 2.281408009296837, 0.0102),
-        Quaternion(0.0, 0.0, 0.07185644361174354, 0.9974149846034358),
-    ),
-    "3": (
-        Point(1.6296398016279827, 1.4617992377591547, 0.0102),
-        Quaternion(0.0, 0.0, 0.07214590937638982, 0.997394088492735),
-    ),
-    "4": (
-        Point(1.7891876967063711, 0.6209652252079119, 0.0102),
-        Quaternion(0.0, 0.0, -0.005679318202515465, 0.9999838725423299),
-    ),
-    "5": (
-        Point(1.9150393764830873, -0.21134129264055662, 0.010199999999999999),
-        Quaternion(0.0, 0.0, -0.2439218105436791, 0.9697949011729714),
-    ),
-    "6": (
-        Point(0.20461857551725132, 1.6533389602064918, 0.010200000000000004),
-        Quaternion(0.0, 0.0, 0.9964777382330111, -0.08385772001445518),
-    ),
-    "7": (
-        Point(0.4272674336836944, 0.83219598399239, 0.0102),
-        Quaternion(0.0, 0.0, 0.9947478059045937, -0.10235625358519646),
-    ),
-    "8": (
-        Point(1.0648070049458176, -0.302468245750806, 0.010199999999999999),
-        Quaternion(0.0, 0.0, -0.6178099553656561, 0.7863274502718863),
-    ),
-    "far": (
-        Point(0.8348034063867399, 2.058496798133918, 0.010199999999999999),
-        Quaternion(0.0, 0.0, 0.4270189450655432, 0.9042426779106981),
-    ),
-    "on_ramp": (
-        Point(-0.8334473332557941, 2.584811945485156, 0.0102),
-        Quaternion(0.0, 0.0, -0.9617331318932912, 0.2739879249505739),
-    ),
-    "scan": (
-        Point(0.9380181464288736, 1.4855115054663668, 0.0102),
-        Quaternion(0.0, 0.0, 0.0009838736033419004, 0.9999995159962491),
-    ),
-}
-
+from config_globals import *
 
 class DriverRamp(Drive):
     def __init__(self, rate, pub_node):
@@ -93,8 +40,7 @@ class DriverRamp(Drive):
                 initial_pose_cov_stamp = PoseWithCovarianceStamped()
                 initial_pose_cov = PoseWithCovariance()
                 initial_pose = Pose()
-                initial_pose.position = WAYPOINT_MAP["off_ramp"][0]
-                initial_pose.orientation = WAYPOINT_MAP["off_ramp"][1]
+                initial_pose = WAYPOINT_MAP["off_ramp"]
                 initial_pose_cov.pose = initial_pose
                 initial_pose_cov_stamp.pose = initial_pose_cov
 
@@ -122,8 +68,7 @@ class DriveToStart(smach.State):
         self.client.wait_for_server()
         self.start_pose = MoveBaseGoal()
         self.start_pose.target_pose.header.frame_id = "map"
-        self.start_pose.target_pose.pose.position = WAYPOINT_MAP["scan"][0]
-        self.start_pose.target_pose.pose.orientation = WAYPOINT_MAP["scan"][1]
+        self.start_pose.target_pose.pose = WAYPOINT_MAP["scan"]
         self.current_task = 0
         self.task_list = ["ar_survey", "parking_spot", "on_ramp"]
         self.light_pubs = light_pubs
@@ -132,8 +77,7 @@ class DriveToStart(smach.State):
         if self.current_task == 0:
             init_pose = MoveBaseGoal()
             init_pose.target_pose.header.frame_id = "map"
-            init_pose.target_pose.pose.position = WAYPOINT_MAP["8"][0]
-            init_pose.target_pose.pose.orientation = WAYPOINT_MAP["8"][1]
+            init_pose.target_pose.pose = WAYPOINT_MAP["8"]
             rospy.sleep(0.5)
 
             self.client.send_goal(init_pose)
@@ -288,8 +232,7 @@ class ParkingSpot(smach.State):
 
         pose = MoveBaseGoal()
         pose.target_pose.header.frame_id = "map"
-        pose.target_pose.pose.position = WAYPOINT_MAP[str(self.parking_spot)][0]
-        pose.target_pose.pose.orientation = WAYPOINT_MAP[str(self.parking_spot)][1]
+        pose.target_pose.pose = WAYPOINT_MAP[str(self.parking_spot)]
 
         self.client.send_goal(pose)
         self.client.wait_for_result()
@@ -316,16 +259,14 @@ class OnRamp(smach.State):
     def execute(self, userdata):
         pose_prepare = MoveBaseGoal()
         pose_prepare.target_pose.header.frame_id = "map"
-        pose_prepare.target_pose.pose.position = WAYPOINT_MAP["1"][0]
-        pose_prepare.target_pose.pose.orientation = WAYPOINT_MAP["1"][1]
+        pose_prepare.target_pose.pose = WAYPOINT_MAP["1"]
 
         self.client.send_goal(pose_prepare)
         self.client.wait_for_result()
 
         pose_ramp = MoveBaseGoal()
         pose_ramp.target_pose.header.frame_id = "map"
-        pose_ramp.target_pose.pose.position = WAYPOINT_MAP["on_ramp"][0]
-        pose_ramp.target_pose.pose.orientation = WAYPOINT_MAP["on_ramp"][1]
+        pose_ramp.target_pose.pose = WAYPOINT_MAP["on_ramp"]
 
         self.client.send_goal(pose_ramp)
         self.client.wait_for_result()

@@ -17,20 +17,17 @@ from image_processing import (
     get_green_mask,
     detect_shape,
     detect_green_shape,
-    Shapes,
     study_shapes,
     count_objects,
 )
 import cv_bridge
 import cv2
 from utils import display_count
-
-the_shape = Shapes.unknown
-
+from config_globals import *
 
 def get_the_shape():
-    global the_shape
-    return the_shape
+    global g2_the_shape
+    return g2_the_shape
 
 
 class TurnLeft2Start(smach.State):
@@ -51,7 +48,7 @@ class DriveToObjects(Drive):
         #self.pub_node = pub_node
 
     def execute(self, userdata):
-        global the_shape
+        global g2_the_shape
         white_line_sub = rospy.Subscriber(
             "white_line_centroid", Centroid, self.image_callback
         )
@@ -135,8 +132,8 @@ class Detect2(smach.State):
     def execute(self, userdata):
         # Maybe do some corrections
         # Count objects
-        global the_shape
-        the_shape = study_shapes(
+        global g2_the_shape
+        g2_the_shape = study_shapes(
             get_green_mask, min_samples=50, max_samples=150, confidence=0.6
         )
 
@@ -162,7 +159,7 @@ class Detect2(smach.State):
         self.sound_pub.publish(sound_msg)
 
         print("Counted:", max(count_tally, key=count_tally.get))
-        print("The shape is: ", the_shape)
+        print("The shape is: ", g2_the_shape)
         return "turn_180"
 
 

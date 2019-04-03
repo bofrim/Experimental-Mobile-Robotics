@@ -10,6 +10,9 @@ class Shapes(Enum):
     circle = 9
 
 
+# Common
+SPEED = 0.35
+
 # Color Bounds
 RED_UPPER = [20, 255, 255]
 RED_LOWER = [317, 80, 80]

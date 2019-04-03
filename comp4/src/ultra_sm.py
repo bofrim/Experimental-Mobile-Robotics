@@ -160,13 +160,15 @@ def main():
         smach.StateMachine.add(
             "PUSH_RIGHT",
             PushRight(rate, cmd_vel_pub),
-            transitions={"change": "this", "exit": "exit"},
+            # transitions={"shape_scan": "SHAPE_SCAN", "exit": "exit"},
+            transitions={"exit": "exit"},
         )
 
         smach.StateMachine.add(
             "PUSH_LEFT",
             PushLeft(rate, cmd_vel_pub),
-            transitions={"change": "this", "exit": "exit"},
+            # transitions={"SHAPE_SCAN": "SHAPE_SCAN", "exit": "exit"},
+            transitions={"exit": "exit"},
         )
 
         smach.StateMachine.add(

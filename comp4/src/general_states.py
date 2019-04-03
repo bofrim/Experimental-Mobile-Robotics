@@ -12,6 +12,7 @@ from comp2.msg import Centroid
 from time import time
 from image_processing import get_white_mask
 from utils import display_count
+from config_globals import *
 
 
 class Drive(smach.State):
@@ -24,7 +25,7 @@ class Drive(smach.State):
         self.twist = Twist()
         self.path_centroid = Centroid()
         self.stop_centroid = Centroid()
-        self.speed = 0.3
+        self.speed = SPEED
 
     def red_line_callback(self, msg):
         self.stop_distance = msg.cy
@@ -86,7 +87,7 @@ class Advancer(Drive):
 
             curr_err = self.stop_centroid.err
             delta_err = curr_err - prev_stop_err
-            twist.linear.x = 0.3
+            twist.linear.x = SPEED
             twist.angular.z = (-float(curr_err) / 1800) + (-float(delta_err) / 1800)
 
             prev_stop_err = curr_err

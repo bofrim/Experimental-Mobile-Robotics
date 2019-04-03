@@ -66,3 +66,58 @@ def angle_ramp(desired_angle, current_angle, scale=0.3, ramp_denominator=90):
         rotation_ramp = max(2, abs(desired_angle - current_angle) / ramp_denominator)
 
     return rotation_direction * rotation_ramp * scale
+
+
+def broadcast_box_sides(
+    br,
+    listen,
+    relative_frame_name,
+    box_frame_prefix="box",
+    side_offset_from_middle=0.7,
+    middle_offset_from_relative=(0, 0, -0.23),
+    relative_rotation=(0, 0, 1, 0),
+):
+    # Publish a frame to the middle, relative to some other frame
+    br.sendTransform(
+        middle_offset_from_relative,
+        relative_rotation,
+        rospy.Time.now(),
+        box_frame_prefix + "_middle",
+        relative_frame_name,
+    )
+
+    # Get the middle of the box relative to the global odom frame
+    rospy.sleep(0.1)
+    try:
+        box_trans, box_rot = listen.lookupTransform(
+            "odom", box_frame_prefix + "_middle", rospy.Time(0)
+        )
+
+        # Find the sides of the box
+        front_trans = map(sum, zip(box_trans, (-side_offset_from_middle, 0, 0.010)))
+        back_trans = map(sum, zip(box_trans, (side_offset_from_middle, 0, 0.010)))
+        left_trans = map(sum, zip(box_trans, (0, -side_offset_from_middle, 0.010)))
+        right_trans = map(sum, zip(box_trans, (0, side_offset_from_middle, 0.010)))
+
+        # Publish frames to the sides of the box relative to odom
+        br.sendTransform(
+            front_trans, (0, 0, 0, 1), rospy.Time.now(), "box_front", "odom"
+        )
+        br.sendTransform(back_trans, (0, 0, 1, 0), rospy.Time.now(), "box_back", "odom")
+        br.sendTransform(
+            left_trans,
+            (0, 0, 0.70710678, 0.70710678),
+            rospy.Time.now(),
+            "box_right",
+            "odom",
+        )
+        br.sendTransform(
+            right_trans,
+            (0, 0, -0.70710678, 0.70710678),
+            rospy.Time.now(),
+            "box_left",
+            "odom",
+        )
+        print("done")
+    except tf.ExtrapolationException as e:
+        pass

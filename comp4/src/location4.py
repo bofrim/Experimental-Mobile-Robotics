@@ -373,7 +373,7 @@ class Push(smach.State):
         self.client.wait_for_result()
 
         if target_frame_id == "box_right":
-            for _ in range(3):
+            for _ in range(8):
                 twist = Twist()
                 twist.angular.z = 0.2
                 self.pub_node.publish(twist)
@@ -458,8 +458,8 @@ class ShapeScan(smach.State):
 
             shape = study_shapes(get_red_mask_image_det, max_samples=60, confidence=0.5)
 
-            # if shape == get_the_shape():
-            if shape == Shapes.square:
+            #if shape == Shapes.square:
+            if shape == get_the_shape():
                 display_count(2, self.led_nodes, color_primary=Led.ORANGE)
                 # TODO: Make sound
 

@@ -129,25 +129,25 @@ def main():
 
         smach.StateMachine.add(
             "BOX_SURVEY",
-            BoxSurvey(rate, cmd_vel_pub),
+            BoxSurvey(rate, cmd_vel_pub, light_pubs),
             transitions={"tag_scan_1": "TAG_SCAN_1", "exit": "exit"},
         )
 
         smach.StateMachine.add(
             "TAG_SCAN_1",
-            TagScan1(rate, cmd_vel_pub),
+            TagScan1(rate, cmd_vel_pub, light_pubs),
             transitions={"tag_scan_2": "TAG_SCAN_2", "push": "PUSH", "exit": "exit"},
         )
 
         smach.StateMachine.add(
             "TAG_SCAN_2",
-            TagScan2(rate, cmd_vel_pub),
+            TagScan2(rate, cmd_vel_pub, light_pubs),
             transitions={"tag_scan_1": "TAG_SCAN_1", "push": "PUSH", "exit": "exit"},
         )
 
         smach.StateMachine.add(
             "PUSH",
-            Push(rate, cmd_vel_pub),
+            Push(rate, cmd_vel_pub, light_pubs),
             transitions={"shape_scan": "SHAPE_SCAN", "exit": "exit"},
         )
 

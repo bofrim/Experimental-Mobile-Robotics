@@ -23,6 +23,13 @@ def point_to_distance(y_value, y_min, y_max):
     return interpolate_map(y_value, y_min, y_max, TOP_DISTANCE, BOTTOM_DISTANCE)
 
 
+def extract_angle(pose):
+    pose = numpify(pose)
+    _, _, angles, _, _ = decompose_matrix(pose)
+    theta = angles[2] * 180 / 3.14159
+    return theta
+
+
 def wait_for_odom_angle(timeout=None):
     odom = rospy.wait_for_message("odom", Odometry, timeout=timeout)
     pose = numpify(odom.pose.pose)
@@ -87,11 +94,9 @@ def broadcast_box_sides(
         relative_frame_name,
     )
 
-    # Get the middle of the box relative to the global odom frame
-    rospy.sleep(0.1)
     try:
         box_trans, box_rot = listen.lookupTransform(
-            "odom", box_frame_prefix + "_middle", rospy.Time(0)
+            "map", box_frame_prefix + "_middle", rospy.Time(0)
         )
 
         # Find the sides of the box
@@ -102,23 +107,24 @@ def broadcast_box_sides(
 
         # Publish frames to the sides of the box relative to odom
         br.sendTransform(
-            front_trans, (0, 0, 0, 1), rospy.Time.now(), "box_front", "odom"
+            front_trans, (0, 0, 0, 1), rospy.Time.now(), "box_front", "map"
         )
-        br.sendTransform(back_trans, (0, 0, 1, 0), rospy.Time.now(), "box_back", "odom")
+        br.sendTransform(back_trans, (0, 0, 1, 0), rospy.Time.now(), "box_back", "map")
         br.sendTransform(
             left_trans,
             (0, 0, 0.70710678, 0.70710678),
             rospy.Time.now(),
             "box_right",
-            "odom",
+            "map",
         )
         br.sendTransform(
             right_trans,
             (0, 0, -0.70710678, 0.70710678),
             rospy.Time.now(),
             "box_left",
-            "odom",
+            "map",
         )
-        print("done")
+        print("done, ", )
     except tf.ExtrapolationException as e:
+        print(e)
         pass

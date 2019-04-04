@@ -124,7 +124,7 @@ def main():
         smach.StateMachine.add(
             "OFF_RAMP",
             DriverRamp(rate, cmd_vel_pub),
-            transitions={"start": "SHAPE_SCAN", "exit": "exit"},
+            transitions={"start": "BOX_SURVEY", "exit": "exit"},
         )
 
         smach.StateMachine.add(
@@ -149,16 +149,6 @@ def main():
             "PUSH",
             Push(rate, cmd_vel_pub),
             transitions={"shape_scan": "SHAPE_SCAN", "exit": "exit"},
-        )
-
-        smach.StateMachine.add(
-            "TAG_SCAN_2",
-            TagScan2(rate, cmd_vel_pub),
-            transitions={
-                "tag_scan_1": "TAG_SCAN_1",
-                "push_left": "PUSH_LEFT",
-                "exit": "exit",
-            },
         )
 
         smach.StateMachine.add(

@@ -75,12 +75,13 @@ class DriverRamp(Drive):
 
 
 class BoxSurvey(smach.State):
-    def __init__(self, rate, pub_node, led_nodes):
+    def __init__(self, rate, pub_node, led_nodes, sound_node):
         smach.State.__init__(self, outcomes=["tag_scan_1", "exit"])
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
         self.pub_node = pub_node
         self.led_nodes = led_nodes
+        self.sound_node = sound_node
         self.rate = rate
         self.ar_focus_id = -1
         self.target_repetitions = 0
@@ -107,14 +108,18 @@ class BoxSurvey(smach.State):
         global g4_box_left_side
         global g4_box_right_side
 
-        while (self.ar_focus_id == -1 or self.target_repetitions < 4) and not rospy.is_shutdown():
+        while (
+            self.ar_focus_id == -1 or self.target_repetitions < 4
+        ) and not rospy.is_shutdown():
             twist = Twist()
             twist.angular.x = 0.2
             self.pub_node.publish(twist)
             self.rate.sleep()
 
         display_count(2, self.led_nodes, color_primary=Led.RED)
-        #TODO: Make sound
+        sound_msg = Sound()
+        sound_msg.value = Sound.ON
+        self.sound_node.publish(sound_msg)
 
         rospy.sleep(2)
         g4_box_left_side = self.listen.lookupTransform(
@@ -123,7 +128,6 @@ class BoxSurvey(smach.State):
         g4_box_right_side = self.listen.lookupTransform(
             "/map", "box_right", rospy.Time(0)
         )
-
 
     def ar_callback(self, msg):
         global g4_box_id
@@ -148,7 +152,7 @@ class BoxSurvey(smach.State):
 
 
 class TagScan1(smach.State):
-    def __init__(self, rate, pub_node, led_nodes):
+    def __init__(self, rate, pub_node, led_nodes, sound_node):
         smach.State.__init__(
             self,
             outcomes=["tag_scan_2", "push", "exit"],
@@ -157,6 +161,7 @@ class TagScan1(smach.State):
         self.rate = rate
         self.pub_node = pub_node
         self.led_nodes = led_nodes
+        self.sound_node = sound_node
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
         self.ar_focus_id = -1
@@ -167,7 +172,6 @@ class TagScan1(smach.State):
             MARKER_POSE_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
 
-
     def execute(self, user_data):
         self.drive_to_scan_point()
         self.scan()
@@ -177,7 +181,9 @@ class TagScan1(smach.State):
             user_data.ref_angle = -90
             user_data.push_start_tf = "box_left"
             display_count(2, self.led_nodes)
-            #TODO: Make sound
+            sound_msg = Sound()
+            sound_msg.value = Sound.ON
+            self.sound_node.publish(sound_msg)
             return "push"
 
     def drive_to_scan_point(self):
@@ -201,7 +207,7 @@ class TagScan1(smach.State):
             twist.angular.z = 0.3
             self.pub_node.publish(twist)
             self.rate.sleep()
-        
+
         print("AFTER WHILE: ", self.ar_focus_id)
         ar_trans, ar_rot = self.listen.lookupTransform(
             "odom", "ar_marker_" + str(self.ar_focus_id), rospy.Time(0)
@@ -231,7 +237,7 @@ class TagScan1(smach.State):
 
 
 class TagScan2(smach.State):
-    def __init__(self, rate, pub_node, led_nodes):
+    def __init__(self, rate, pub_node, led_nodes, sound_node):
         smach.State.__init__(
             self,
             outcomes=["tag_scan_1", "push", "exit"],
@@ -240,6 +246,7 @@ class TagScan2(smach.State):
         self.rate = rate
         self.pub_node = pub_node
         self.led_nodes = led_nodes
+        self.sound_node = sound_node
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
         self.ar_focus_id = -1
@@ -250,14 +257,15 @@ class TagScan2(smach.State):
             MARKER_POSE_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
 
-
     def execute(self, user_data):
         self.drive_to_scan_point()
-        self.scan()            
+        self.scan()
         user_data.ref_angle = 90
         user_data.push_start_tf = "box_right"
         display_count(2, self.led_nodes)
-        #TODO: Make sound
+        sound_msg = Sound()
+        sound_msg.value = Sound.ON
+        self.sound_node.publish(sound_msg)
         return "push"
 
     def drive_to_scan_point(self):
@@ -283,7 +291,7 @@ class TagScan2(smach.State):
             twist.angular.z = -0.3
             self.pub_node.publish(twist)
             self.rate.sleep()
-        
+
         print("AFTER WHILE: ", self.ar_focus_id)
         ar_trans, ar_rot = self.listen.lookupTransform(
             "odom", "ar_marker_" + str(self.ar_focus_id), rospy.Time(0)
@@ -311,8 +319,9 @@ class TagScan2(smach.State):
                 self.target_marker = marker
                 break
 
+
 class Push(smach.State):
-    def __init__(self, rate, pub_node, led_nodes):
+    def __init__(self, rate, pub_node, led_nodes, sound_node):
         smach.State.__init__(
             self,
             outcomes=["shape_scan", "exit"],
@@ -323,18 +332,18 @@ class Push(smach.State):
         self.rate = rate
         self.pub_node = pub_node
         self.led_nodes = led_nodes
+        self.sound_node = sound_node
         self.pid = PID(kp=-0.001, ki=-0.005, kd=-0.002, reference_value=0)
         self.curr_error = 0
         self.prev_error = 0
         self.cumm_error = 0
         self.kp = -0.01
         self.ki = -0.005
-        self.kd = -0.002 
+        self.kd = -0.002
         self.distance_to_target = 1000
         self.reference = 0
         self.listen = tf.TransformListener()
         self.br = tf.TransformBroadcaster()
-        
 
     def execute(self, user_data):
         ar_sub = rospy.Subscriber(
@@ -364,7 +373,6 @@ class Push(smach.State):
             self.pub_node.publish(twist)
             self.rate.sleep()
 
-
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = target_frame_id
         goal.target_pose.pose.position = Point(0, 0, 0)
@@ -378,7 +386,6 @@ class Push(smach.State):
                 twist.angular.z = 0.2
                 self.pub_node.publish(twist)
                 self.rate.sleep()
-
 
         print("REACHED GOAL")
         display_count(2, self.led_nodes, Led.GREEN, Led.RED)
@@ -400,7 +407,7 @@ class Push(smach.State):
 
             self.pub_node.publish(twist)
             self.rate.sleep()
-    
+
     def reset(self):
         twist = Twist()
         twist.linear.x = -0.3
@@ -411,13 +418,14 @@ class Push(smach.State):
     def odom_callback(self, msg):
         robot_pose = msg.pose.pose
         theta = extract_angle(msg.pose.pose)
-        #self.pid.update_state(value=theta)
+        # self.pid.update_state(value=theta)
         print("THETA", theta)
-        self.distance_to_target = abs(g4_target_location.position.y - robot_pose.position.y)
+        self.distance_to_target = abs(
+            g4_target_location.position.y - robot_pose.position.y
+        )
         self.curr_error = theta - self.reference
-        #print("dist to targ: ", self.distance_to_target
+        # print("dist to targ: ", self.distance_to_target
 
-    
     def ar_callback(self, msg):
         global g4_box_id
         if not msg.markers:
@@ -430,13 +438,13 @@ class Push(smach.State):
                 broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(marker.id))
 
 
-
 class ShapeScan(smach.State):
-    def __init__(self, rate, pub_node, led_nodes):
+    def __init__(self, rate, pub_node, led_nodes, sound_node):
         smach.State.__init__(self, outcomes=["on_ramp", "exit"])
         self.rate = rate
         self.pub_node = pub_node
         self.led_nodes = led_nodes
+        self.sound_node = sound_node
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.client.wait_for_server()
 
@@ -461,15 +469,21 @@ class ShapeScan(smach.State):
             # if shape == get_the_shape():
             if shape == Shapes.square:
                 display_count(2, self.led_nodes, color_primary=Led.ORANGE)
-                # TODO: Make sound
+                sound_msg = Sound()
+                sound_msg.value = Sound.ON
+                self.sound_node.publish(sound_msg)
 
                 msg.linear.x = 0.2
                 for _ in range(0, 3):
                     self.pub_node.publish(msg)
                     rospy.sleep(0.2)
 
-                display_count(3, self.led_nodes, color_primary=Led.ORANGE, color_secondary=Led.GREEN)
-                # TODO: Make sound
+                display_count(
+                    3,
+                    self.led_nodes,
+                    color_primary=Led.ORANGE,
+                    color_secondary=Led.GREEN,
+                )
                 break
 
         return "on_ramp"

@@ -18,7 +18,7 @@ from geometry_msgs.msg import (
     Pose,
 )
 
-from image_processing import study_shapes, get_red_mask
+from image_processing import study_shapes, get_red_mask, get_red_mask_image_det
 
 from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
@@ -189,7 +189,7 @@ class ShapeScan(smach.State):
         self.client.wait_for_server()
 
     def execute(self, userdata):
-        for spot_num in range(8, 0, -1):
+        for spot_num in range(8, 5, -1):
             parking_spot = MoveBaseGoal()
             parking_spot.target_pose.header.frame_id = "map"
             parking_spot.target_pose.pose = WAYPOINT_MAP[str(spot_num)]
@@ -197,17 +197,32 @@ class ShapeScan(smach.State):
             self.client.send_goal(parking_spot)
             self.client.wait_for_result()
 
+            msg = Twist()
+            msg.linear.x = -0.2
+
+            for _ in range(0, 3):
+                self.pub_node.publish(msg)
+                rospy.sleep(0.2)
+
             shape = study_shapes(
-                get_red_mask, max_samples=60, confidence=0.5
+                get_red_mask_image_det, max_samples=60, confidence=0.5
             )        
 
-            '''
-            if shape == get_the_shape():
+            #if shape == get_the_shape():
+            if shape == Shapes.square:
+                msg.linear.x = 0.2
+
+                for _ in range(0, 3):
+                    self.pub_node.publish(msg)
+                    rospy.sleep(0.2)
+                
                 display_count(2, self.led_nodes, color_primary=Led.RED)
                 break 
-            '''
-
+            
         return "on_ramp"
+
+        def drive_backward():
+            back_msg 
         
 
 class OnRamp(smach.State):
@@ -220,7 +235,7 @@ class OnRamp(smach.State):
     def execute(self, userdata):
         pose_prepare = MoveBaseGoal()
         pose_prepare.target_pose.header.frame_id = "map"
-        pose_prepare.target_pose.pose = WAYPOINT_MAP["1"]
+        pose_prepare.target_pose.pose = WAYPOINT_MAP["scan_west"]
 
         self.client.send_goal(pose_prepare)
         self.client.wait_for_result()

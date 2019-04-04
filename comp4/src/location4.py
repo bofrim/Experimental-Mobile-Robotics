@@ -28,6 +28,7 @@ from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, Sound
 from utils import display_count, broadcast_box_sides, wait_for_odom_angle, extract_angle
+from operations import simple_turn
 from config_globals import *
 
 from location2 import get_the_shape
@@ -104,12 +105,12 @@ class BoxSurvey(smach.State):
     def record_box(self):
         global g4_box_left_side
         global g4_box_right_side
-        while (self.ar_focus_id == -1 or self.target_repetitions < 3) and not rospy.is_shutdown():
+        while (self.ar_focus_id == -1 or self.target_repetitions < 4) and not rospy.is_shutdown():
             twist = Twist()
             twist.angular.x = 0.2
             self.pub_node.publish(twist)
             self.rate.sleep()
-            
+        rospy.sleep(2)
         g4_box_left_side = self.listen.lookupTransform(
             "/map", "box_left", rospy.Time(0)
         )
@@ -188,7 +189,7 @@ class TagScan1(smach.State):
                 return
             print("WHILE: ", self.ar_focus_id)
             twist = Twist()
-            twist.angular.z = 0.45
+            twist.angular.z = 0.3
             self.pub_node.publish(twist)
             self.rate.sleep()
         
@@ -267,7 +268,7 @@ class TagScan2(smach.State):
                 return
             print("WHILE: ", self.ar_focus_id)
             twist = Twist()
-            twist.angular.z = -0.45
+            twist.angular.z = -0.3
             self.pub_node.publish(twist)
             self.rate.sleep()
         
@@ -318,8 +319,14 @@ class Push(smach.State):
         self.kd = -0.002 
         self.distance_to_target = 1000
         self.reference = 0
+        self.listen = tf.TransformListener()
+        self.br = tf.TransformBroadcaster()
+        
 
     def execute(self, user_data):
+        ar_sub = rospy.Subscriber(
+            MARKER_POSE_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
+        )
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
         rospy.wait_for_message("odom", Odometry)
         self.drive_to_push_point(user_data.push_start_tf)
@@ -334,7 +341,7 @@ class Push(smach.State):
     def drive_to_push_point(self, target_frame_id):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"
-        goal.target_pose.pose = WAYPOINT_MAP["6"]
+        goal.target_pose.pose = WAYPOINT_MAP["scan"]
         self.client.send_goal(goal)
         self.client.wait_for_result()
 
@@ -363,7 +370,7 @@ class Push(smach.State):
 
     def push_to_goal(self):
         print("Pushing to goal")
-        while self.distance_to_target > 0.7:
+        while self.distance_to_target > 0.3:
             print("Pushing... dist to targ: ", self.distance_to_target)
             twist = Twist()
             twist.linear.x = SPEED
@@ -386,7 +393,20 @@ class Push(smach.State):
         print("THETA", theta)
         self.distance_to_target = abs(g4_target_location.position.y - robot_pose.position.y)
         self.curr_error = theta - self.reference
-        #print("dist to targ: ", self.distance_to_target)
+        #print("dist to targ: ", self.distance_to_target
+
+    
+    def ar_callback(self, msg):
+        global g4_box_id
+        if not msg.markers:
+            self.ar_focus_id = -1
+            self.target_repetitions = 0
+            return
+
+        for marker in msg.markers:
+            if marker.id == g4_box_id:
+                broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(marker.id))
+
 
 
 class ShapeScan(smach.State):

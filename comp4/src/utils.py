@@ -84,6 +84,7 @@ def broadcast_box_sides(
     side_offset_from_middle=0.7,
     middle_offset_from_relative=(0, 0, -0.23),
     relative_rotation=(0, 0, 1, 0),
+    global_frame="odom"
 ):
     # Publish a frame to the middle, relative to some other frame
     br.sendTransform(
@@ -96,7 +97,7 @@ def broadcast_box_sides(
 
     try:
         box_trans, box_rot = listen.lookupTransform(
-            "map", box_frame_prefix + "_middle", rospy.Time(0)
+            global_frame, box_frame_prefix + "_middle", rospy.Time(0)
         )
 
         # Find the sides of the box
@@ -107,22 +108,22 @@ def broadcast_box_sides(
 
         # Publish frames to the sides of the box relative to odom
         br.sendTransform(
-            front_trans, (0, 0, 0, 1), rospy.Time.now(), "box_front", "map"
+            front_trans, (0, 0, 0, 1), rospy.Time.now(), "box_front", global_frame
         )
-        br.sendTransform(back_trans, (0, 0, 1, 0), rospy.Time.now(), "box_back", "map")
+        br.sendTransform(back_trans, (0, 0, 1, 0), rospy.Time.now(), "box_back", global_frame)
         br.sendTransform(
             left_trans,
             (0, 0, 0.70710678, 0.70710678),
             rospy.Time.now(),
             "box_right",
-            "map",
+            global_frame,
         )
         br.sendTransform(
             right_trans,
             (0, 0, -0.70710678, 0.70710678),
             rospy.Time.now(),
             "box_left",
-            "map",
+            global_frame,
         )
         print("done, ", )
     except tf.ExtrapolationException as e:

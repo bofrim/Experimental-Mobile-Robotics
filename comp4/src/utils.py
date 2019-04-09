@@ -84,7 +84,7 @@ def broadcast_box_sides(
     side_offset_from_middle=0.7,
     middle_offset_from_relative=(0, 0, -0.23),
     relative_rotation=(0, 0, 1, 0),
-    global_frame="odom"
+    global_frame="map"
 ):
     # Publish a frame to the middle, relative to some other frame
     br.sendTransform(

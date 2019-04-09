@@ -131,6 +131,9 @@ class BoxSurvey(smach.State):
 
     def ar_callback(self, msg):
         global g4_box_id
+        global g4_box_left_side
+        global g4_box_right_side
+
         if not msg.markers:
             self.ar_focus_id = -1
             self.target_repetitions = 0
@@ -196,9 +199,9 @@ class TagScan1(smach.State):
         global g4_target_location
         start_angle = wait_for_odom_angle()
         while (
-            self.ar_focus_id == -1 or self.target_repetitions < 3
+            self.ar_focus_id not in set([1, 2, 3, 4, 5]) or self.target_repetitions < 3
         ) and not rospy.is_shutdown():
-            if abs(wait_for_odom_angle() - start_angle) > 110:
+            if abs(wait_for_odom_angle() - start_angle) > 102:
                 return
             twist = Twist()
             twist.angular.z = 0.3
@@ -211,6 +214,8 @@ class TagScan1(smach.State):
         )
         g4_target_location.position = Point(*ar_trans)
         g4_target_location.orientation = Quaternion(*ar_rot)
+
+        print "TARGET POSITION: " + str(g4_target_location.position)
         self.found_target = True
 
     def because_i_still_havent_found_what_im_looking_for(self):
@@ -411,6 +416,7 @@ class Push(smach.State):
         self.distance_to_target = abs(
             g4_target_location.position.y - robot_pose.position.y
         )
+        print "DISTANCE: " + str(self.distance_to_target)
         self.curr_error = theta - self.reference
 
     def ar_callback(self, msg):
@@ -486,7 +492,7 @@ class OnRamp(smach.State):
     def execute(self, userdata):
         pose_prepare = MoveBaseGoal()
         pose_prepare.target_pose.header.frame_id = "map"
-        pose_prepare.target_pose.pose = WAYPOINT_MAP["scan_west"]
+        pose_prepare.target_pose.pose = WAYPOINT_MAP["scan_westest"]
 
         self.client.send_goal(pose_prepare)
         self.client.wait_for_result()

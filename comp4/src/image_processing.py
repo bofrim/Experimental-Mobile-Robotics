@@ -71,12 +71,7 @@ def detect_shape(mask, canvas=None, threshold=100, approx_factor=0.03):
                     cv2.drawContours(canvas, [cnt], 0, (0, 0, 255), -1)
                 detected_shapes.append(Shapes.square)
                 moments.append(cv2.moments(cnt))
-            elif len(approx) == 5:
-                if canvas != None:
-                    cv2.drawContours(canvas, [cnt], 0, 255, -1)
-                detected_shapes.append(Shapes.pentagon)
-                moments.append(cv2.moments(cnt))
-            elif len(approx) >= 6:
+            elif len(approx) >= 5:
                 if canvas != None:
                     cv2.drawContours(canvas, [cnt], 0, (0, 255, 255), -1)
                 detected_shapes.append(Shapes.circle)

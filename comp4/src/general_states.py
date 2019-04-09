@@ -4,7 +4,7 @@ import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 
 from geometry_msgs.msg import Twist
-from kobuki_msgs.msg import Led
+from kobuki_msgs.msg import Led, Sound
 from operations import simple_turn, turn_to_line
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
@@ -42,8 +42,9 @@ class Drive(smach.State):
 
 
 class Driver(Drive):
-    def __init__(self, rate, pub_node):
+    def __init__(self, rate, pub_node, sound_node):
         super(Driver, self).__init__(rate, pub_node, ["advance", "exit"])
+        self.sound_node = sound_node
 
     def execute(self, userdata):
         self.stop_distance = -1
@@ -103,7 +104,7 @@ class Advancer(Drive):
 
 
 class AtLine(smach.State):
-    def __init__(self, rate, light_pubs, initial_line=0):
+    def __init__(self, rate, light_pubs, sound_pub, initial_line=0):
         smach.State.__init__(
             self,
             outcomes=[
@@ -121,6 +122,7 @@ class AtLine(smach.State):
         self.rate = rate
         self.red_line_num = initial_line
         self.light_pubs = light_pubs
+        self.sound_pub = sound_pub
 
         # IMPORTANT: These states currently assume that the red line at location2
         # is counted twice (for both directions)
@@ -142,6 +144,13 @@ class AtLine(smach.State):
         self.red_line_num += 1
         print("RED LINE NUMBER: ", self.red_line_num)
         display_count(0, self.light_pubs)
+
+        if self.red_line_num == 11:
+            display_count(2, self.light_pubs)
+            sound_msg = Sound()
+            sound_msg.value = Sound.ON
+            self.sound_pub.publish(sound_msg)
+
         return self.next_states[self.red_line_num]
 
 

@@ -1,8 +1,10 @@
 <launch> 
     <arg name="initial_line" default="0"/>
+    <arg name="skip_push" default="0"/>
 
     <node name="ultra_state_machine" pkg="comp4" type="ultra_sm.py" output="screen" >
         <param name="initial_line" value="$(arg initial_line)" />
+        <param name="skip_push" value="$(arg skip_push)" />
         <remap from="cmd_vel" to="cmd_vel_mux/input/teleop"/>
     </node>
 

@@ -19,8 +19,12 @@ def main():
     rospy.init_node("ultra_state_machine")
     if rospy.has_param("~initial_line"):
         initial_line = rospy.get_param("~initial_line")
-    else:
-        initial_line = 0
+
+    after_box_scan = "PUSH"
+    if rospy.has_param("~skip_push"):
+        after_box_scan = "ON_RAMP"
+
+    print after_box_scan
 
     sound_pub = rospy.Publisher("/mobile_base/commands/sound", Sound, queue_size=1)
 
@@ -41,7 +45,7 @@ def main():
     with state_machine:
         smach.StateMachine.add(
             "DRIVE",
-            Driver(rate, cmd_vel_pub),
+            Driver(rate, cmd_vel_pub, sound_pub),
             transitions={"advance": "ADVANCE", "exit": "exit"},
         )
 
@@ -53,7 +57,7 @@ def main():
 
         smach.StateMachine.add(
             "AT_LINE",
-            AtLine(rate, light_pubs=light_pubs, initial_line=initial_line),
+            AtLine(rate, light_pubs=light_pubs, sound_pub=sound_pub, initial_line=initial_line),
             transitions={
                 "drive": "DRIVE",
                 "turn_left_1": "TURN_LEFT_1",
@@ -124,7 +128,13 @@ def main():
         smach.StateMachine.add(
             "OFF_RAMP",
             DriverRamp(rate, cmd_vel_pub),
-            transitions={"start": "BOX_SURVEY", "exit": "exit"},
+            transitions={"start": "SHAPE_SCAN", "exit": "exit"},
+        )
+
+        smach.StateMachine.add(
+            "SHAPE_SCAN",
+            ShapeScan(rate, cmd_vel_pub, light_pubs, sound_pub),
+            transitions={"done": "BOX_SURVEY", "exit": "exit"},
         )
 
         smach.StateMachine.add(
@@ -136,24 +146,18 @@ def main():
         smach.StateMachine.add(
             "TAG_SCAN_1",
             TagScan1(rate, cmd_vel_pub, light_pubs, sound_pub),
-            transitions={"tag_scan_2": "TAG_SCAN_2", "push": "PUSH", "exit": "exit"},
+            transitions={"tag_scan_2": "TAG_SCAN_2", "found_tag": after_box_scan, "exit": "exit"},
         )
 
         smach.StateMachine.add(
             "TAG_SCAN_2",
             TagScan2(rate, cmd_vel_pub, light_pubs, sound_pub),
-            transitions={"tag_scan_1": "TAG_SCAN_1", "push": "PUSH", "exit": "exit"},
+            transitions={"tag_scan_1": "TAG_SCAN_1", "found_tag": after_box_scan, "exit": "exit"},
         )
 
         smach.StateMachine.add(
             "PUSH",
             Push(rate, cmd_vel_pub, light_pubs, sound_pub),
-            transitions={"shape_scan": "SHAPE_SCAN", "exit": "exit"},
-        )
-
-        smach.StateMachine.add(
-            "SHAPE_SCAN",
-            ShapeScan(rate, cmd_vel_pub, light_pubs, sound_pub),
             transitions={"on_ramp": "ON_RAMP", "exit": "exit"},
         )
 

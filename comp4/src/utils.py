@@ -125,7 +125,6 @@ def broadcast_box_sides(
             "box_left",
             global_frame,
         )
-        print("done, ", )
     except tf.ExtrapolationException as e:
         print(e)
         pass

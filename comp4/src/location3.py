@@ -36,11 +36,14 @@ class Detect3(smach.State):
 
         twist = Twist()
         twist.linear.x = 0.2
-        for _ in range(8):
+
+        
+        for _ in range(2):
             twist = Twist()
             twist.linear.x = 0.1
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
+        
 
         new_shape = study_shapes(
             get_red_mask, min_samples=35, topic="usb_cam/image_raw", confidence=0.5
@@ -58,11 +61,13 @@ class Detect3(smach.State):
         else:
             display_count(0, self.light_pubs)
 
-        for _ in range(8):
+        
+        for _ in range(2):
             twist = Twist()
             twist.linear.x = -0.1
             self.pub_node.publish(twist)
             rospy.sleep(0.2)
+        
         
         next_state = self.next_states[self.count]
         self.count += 1

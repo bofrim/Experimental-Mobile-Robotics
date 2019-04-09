@@ -139,7 +139,6 @@ class BoxSurvey(smach.State):
         for marker in msg.markers:
             if marker.id == self.ar_focus_id:
                 self.target_repetitions = self.target_repetitions + 1
-                print("focus id:", self.ar_focus_id)
                 broadcast_box_sides(self.br, self.listen, "ar_marker_" + str(marker.id))
                 g4_box_id = self.ar_focus_id
 
@@ -155,7 +154,7 @@ class TagScan1(smach.State):
     def __init__(self, rate, pub_node, led_nodes, sound_node):
         smach.State.__init__(
             self,
-            outcomes=["tag_scan_2", "push", "exit"],
+            outcomes=["tag_scan_2", "found_tag", "exit"],
             output_keys=["ref_angle", "push_start_tf"],
         )
         self.rate = rate
@@ -184,7 +183,7 @@ class TagScan1(smach.State):
             sound_msg = Sound()
             sound_msg.value = Sound.ON
             self.sound_node.publish(sound_msg)
-            return "push"
+            return "found_tag"
 
     def drive_to_scan_point(self):
         goal_pose = MoveBaseGoal()
@@ -195,20 +194,18 @@ class TagScan1(smach.State):
 
     def scan(self):
         global g4_target_location
-        print("BEFORE WHILE: ", self.ar_focus_id)
         start_angle = wait_for_odom_angle()
         while (
             self.ar_focus_id == -1 or self.target_repetitions < 3
         ) and not rospy.is_shutdown():
-            if abs(wait_for_odom_angle() - start_angle) > 100:
+            if abs(wait_for_odom_angle() - start_angle) > 110:
                 return
-            print("WHILE: ", self.ar_focus_id)
             twist = Twist()
             twist.angular.z = 0.3
             self.pub_node.publish(twist)
             self.rate.sleep()
 
-        print("AFTER WHILE: ", self.ar_focus_id)
+        print("FOUND MARKER ID: ", self.ar_focus_id)
         ar_trans, ar_rot = self.listen.lookupTransform(
             "odom", "ar_marker_" + str(self.ar_focus_id), rospy.Time(0)
         )
@@ -231,8 +228,6 @@ class TagScan1(smach.State):
                 else:
                     self.ar_focus_id = marker.id
                     self.target_repetitions = 0
-
-                self.target_marker = marker
                 break
 
 
@@ -240,7 +235,7 @@ class TagScan2(smach.State):
     def __init__(self, rate, pub_node, led_nodes, sound_node):
         smach.State.__init__(
             self,
-            outcomes=["tag_scan_1", "push", "exit"],
+            outcomes=["tag_scan_1", "found_tag", "exit"],
             output_keys=["ref_angle", "push_start_tf"],
         )
         self.rate = rate
@@ -266,7 +261,7 @@ class TagScan2(smach.State):
         sound_msg = Sound()
         sound_msg.value = Sound.ON
         self.sound_node.publish(sound_msg)
-        return "push"
+        return "found_tag"
 
     def drive_to_scan_point(self):
         goal_pose = MoveBaseGoal()
@@ -277,7 +272,6 @@ class TagScan2(smach.State):
 
     def scan(self):
         global g4_target_location
-        print("BEFORE WHILE: ", self.ar_focus_id)
         start_angle = wait_for_odom_angle()
         while (
             self.ar_focus_id == -1 or self.target_repetitions < 3
@@ -286,13 +280,12 @@ class TagScan2(smach.State):
                 g4_target_location = WAYPOINT_MAP["3"]
                 self.found_target = True
                 return
-            print("WHILE: ", self.ar_focus_id)
             twist = Twist()
             twist.angular.z = -0.3
             self.pub_node.publish(twist)
             self.rate.sleep()
 
-        print("AFTER WHILE: ", self.ar_focus_id)
+        print("FOUND MARKER ID: ", self.ar_focus_id)
         ar_trans, ar_rot = self.listen.lookupTransform(
             "odom", "ar_marker_" + str(self.ar_focus_id), rospy.Time(0)
         )
@@ -315,8 +308,6 @@ class TagScan2(smach.State):
                 else:
                     self.ar_focus_id = marker.id
                     self.target_repetitions = 0
-
-                self.target_marker = marker
                 break
 
 
@@ -324,7 +315,7 @@ class Push(smach.State):
     def __init__(self, rate, pub_node, led_nodes, sound_node):
         smach.State.__init__(
             self,
-            outcomes=["shape_scan", "exit"],
+            outcomes=["on_ramp", "exit"],
             input_keys=["push_start_tf", "ref_angle"],
         )
         self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
@@ -354,11 +345,10 @@ class Push(smach.State):
         self.drive_to_push_point(user_data.push_start_tf)
         self.reference = wait_for_odom_angle()
         self.pid.ref = self.reference
-        print("INIT ANGLE: ", self.pid.ref)
         self.push_to_goal()
         self.reset()
         odom_sub.unregister()
-        return "shape_scan"
+        return "on_ramp"
 
     def drive_to_push_point(self, target_frame_id):
         goal = MoveBaseGoal()
@@ -398,9 +388,8 @@ class Push(smach.State):
         #     self.pub_node.publish(twist)
 
     def push_to_goal(self):
-        print("Pushing to goal")
         while self.distance_to_target > 0.3:
-            print("Pushing... dist to targ: ", self.distance_to_target)
+            #print("Pushing... dist to targ: ", self.distance_to_target)
             twist = Twist()
             twist.linear.x = SPEED
             twist.angular.z = self.kp * self.curr_error
@@ -419,12 +408,10 @@ class Push(smach.State):
         robot_pose = msg.pose.pose
         theta = extract_angle(msg.pose.pose)
         # self.pid.update_state(value=theta)
-        print("THETA", theta)
         self.distance_to_target = abs(
             g4_target_location.position.y - robot_pose.position.y
         )
         self.curr_error = theta - self.reference
-        # print("dist to targ: ", self.distance_to_target
 
     def ar_callback(self, msg):
         global g4_box_id
@@ -440,7 +427,7 @@ class Push(smach.State):
 
 class ShapeScan(smach.State):
     def __init__(self, rate, pub_node, led_nodes, sound_node):
-        smach.State.__init__(self, outcomes=["on_ramp", "exit"])
+        smach.State.__init__(self, outcomes=["done", "exit"])
         self.rate = rate
         self.pub_node = pub_node
         self.led_nodes = led_nodes
@@ -486,7 +473,7 @@ class ShapeScan(smach.State):
                 )
                 break
 
-        return "on_ramp"
+        return "done"
 
 
 class OnRamp(smach.State):

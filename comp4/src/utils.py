@@ -84,7 +84,7 @@ def broadcast_box_sides(
     side_offset_from_middle=0.7,
     middle_offset_from_relative=(0, 0, -0.23),
     relative_rotation=(0, 0, 1, 0),
-    global_frame="odom"
+    global_frame="map_corrected",
 ):
     # Publish a frame to the middle, relative to some other frame
     br.sendTransform(
@@ -110,7 +110,9 @@ def broadcast_box_sides(
         br.sendTransform(
             front_trans, (0, 0, 0, 1), rospy.Time.now(), "box_front", global_frame
         )
-        br.sendTransform(back_trans, (0, 0, 1, 0), rospy.Time.now(), "box_back", global_frame)
+        br.sendTransform(
+            back_trans, (0, 0, 1, 0), rospy.Time.now(), "box_back", global_frame
+        )
         br.sendTransform(
             left_trans,
             (0, 0, 0.70710678, 0.70710678),

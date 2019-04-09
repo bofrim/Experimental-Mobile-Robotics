@@ -3,6 +3,7 @@ import general_states
 import rospy
 import smach
 import smach_ros
+import tf
 
 from location1 import Detect1
 from location2 import DriveToObjects, DriveFromObjects, Detect2
@@ -10,6 +11,7 @@ from location3 import Detect3
 from location4 import DriverRamp, BoxSurvey, TagScan1, TagScan2, Push, OnRamp, ShapeScan
 
 from general_states import Driver, Advancer, AtLine, Turn
+from config_globals import *
 from geometry_msgs.msg import Twist
 from kobuki_msgs.msg import Led, Sound
 from time import time
@@ -41,6 +43,15 @@ def main():
     light_pubs.append(rospy.Publisher("/mobile_base/commands/led2", Led, queue_size=1))
 
     rate = rospy.Rate(10)
+
+    broadcaster = tf.TransformBroadcaster()
+    broadcaster.sendTransform(
+        MAP_CORRECTION_TRANS,
+        tf.transformations.quaternion_from_euler(*MAP_CORRECTION_ANGLE_EUDEG),
+        rospy.Time.now(),
+        "map_corrected",
+        "map",
+    )
 
     with state_machine:
         smach.StateMachine.add(

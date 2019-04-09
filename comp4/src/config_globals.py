@@ -13,6 +13,10 @@ class Shapes(Enum):
 # Common
 SPEED = 0.35
 
+# Map
+MAP_CORRECTION_ANGLE_EUDEG = (0, 0, -10 * 3.141592 / 180)  # 10 degrees less
+MAP_CORRECTION_TRANS = (0, 0, 0)
+
 # Color Bounds
 RED_UPPER = [20, 255, 255]
 RED_LOWER = [317, 80, 80]
@@ -72,7 +76,7 @@ WAYPOINT_MAP = {
     ),
     "5": Pose(
         Point(1.9150393764830873, -0.21134129264055662, 0.010199999999999999),
-        #Quaternion(0.0, 0.0, -0.2439218105436791, 0.9697949011729714),
+        # Quaternion(0.0, 0.0, -0.2439218105436791, 0.9697949011729714),
         Quaternion(0.0, 0.0, -0.005679318202515465, 0.9999838725423299),
     ),
     "6": Pose(

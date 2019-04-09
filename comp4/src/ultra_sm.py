@@ -21,7 +21,7 @@ def main():
         initial_line = rospy.get_param("~initial_line")
 
     after_box_scan = "PUSH"
-    if rospy.has_param("~skip_push"):
+    if rospy.get_param("~skip_push"):
         after_box_scan = "ON_RAMP"
 
     print after_box_scan

@@ -357,18 +357,6 @@ class Push(smach.State):
 
     def drive_to_push_point(self, target_frame_id):
         goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = "map"
-        goal.target_pose.pose = WAYPOINT_MAP["scan"]
-        self.client.send_goal(goal)
-        self.client.wait_for_result()
-
-        for _ in range(12):
-            twist = Twist()
-            twist.linear.x = -0.2
-            self.pub_node.publish(twist)
-            self.rate.sleep()
-
-        goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = target_frame_id
         goal.target_pose.pose.position = Point(0, 0, 0)
         goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)

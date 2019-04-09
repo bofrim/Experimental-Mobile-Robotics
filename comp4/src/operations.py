@@ -41,7 +41,6 @@ def turn_to_line(approx_angle, twist_pub, max_error=10, anglular_scale=1.0):
         "white_line_centroid", Centroid, centroid_turn_callback
     )
     g_prev_err = 0
-    print(abs(g_centroid.err))
     while abs(g_centroid.err) > max_error or g_centroid.cx == -1:
         out_twist = Twist()
         delta_err = g_centroid.err - g_prev_err

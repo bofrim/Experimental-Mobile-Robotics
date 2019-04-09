@@ -136,7 +136,6 @@ class Detect2(smach.State):
             if count in count_tally:
                 count_tally[count] += 1
         display_count(max(count_tally, key=count_tally.get), self.light_pubs)
-        print(count_tally)
 
         sound_msg = Sound()
         sound_msg.value = Sound.ON

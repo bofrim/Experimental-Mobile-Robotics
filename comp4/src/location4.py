@@ -26,6 +26,7 @@ from image_processing import study_shapes, get_red_mask, get_red_mask_image_det
 
 from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from actionlib_msgs.msg import GoalStatus
 from kobuki_msgs.msg import Led, Sound
 from utils import display_count, broadcast_box_sides, wait_for_odom_angle, extract_angle, standardize_theta
 from operations import simple_turn
@@ -343,17 +344,23 @@ class Push(smach.State):
         self.br = tf.TransformBroadcaster()
 
     def execute(self, user_data):
+        global g_after_box_scan
         ar_sub = rospy.Subscriber(
             MARKER_POSE_TOPIC, AlvarMarkers, self.ar_callback, queue_size=1
         )
         odom_sub = rospy.Subscriber("odom", Odometry, self.odom_callback)
         rospy.wait_for_message("odom", Odometry)
-        self.drive_to_push_point(user_data.push_start_tf)
+        if self.drive_to_push_point(user_data.push_start_tf) != GoalStatus.SUCEEDED:
+            print("Aborted, skip pushing")
+            return "on_ramp"
+
         self.reference = wait_for_odom_angle()
         self.pid.ref = self.reference
         self.push_to_goal()
         self.reset()
         odom_sub.unregister()
+        # Only execute this state once, next time skip it
+        g_after_box_scan = "ON_RAMP"
         return "on_ramp"
 
     def drive_to_push_point(self, target_frame_id):
@@ -362,7 +369,7 @@ class Push(smach.State):
         goal.target_pose.pose.position = Point(0, 0, 0)
         goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
         self.client.send_goal(goal)
-        self.client.wait_for_result()
+        client_output = self.client.wait_for_result()
 
         if target_frame_id == "box_right":
             for _ in range(8):
@@ -380,6 +387,8 @@ class Push(smach.State):
         #     twist = Twist()
         #     twist.angular.z = self.pid.output
         #     self.pub_node.publish(twist)
+
+        return client_output
 
     def push_to_goal(self):
         while self.distance_to_target > 0.3:

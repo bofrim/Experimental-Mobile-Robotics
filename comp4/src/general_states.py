@@ -150,6 +150,7 @@ class AtLine(smach.State):
             sound_msg = Sound()
             sound_msg.value = Sound.ON
             self.sound_pub.publish(sound_msg)
+            self.red_line_num = 1
 
         return self.next_states[self.red_line_num]
 

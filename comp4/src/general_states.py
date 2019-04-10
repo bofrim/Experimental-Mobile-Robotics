@@ -5,13 +5,12 @@ import smach, smach_ros
 
 from geometry_msgs.msg import Twist
 from kobuki_msgs.msg import Led, Sound
-from operations import simple_turn, turn_to_line
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
 from comp2.msg import Centroid
 from time import time
 from image_processing import get_white_mask
-from utils import display_count
+from utils import display_count, simple_turn
 from config_globals import *
 
 
@@ -57,7 +56,6 @@ class Driver(Drive):
 
         while not rospy.is_shutdown():
 
-            # TODO: Tweak this based on red line detection
             if self.stop_distance > 420:
                 stop_sub.unregister()
                 image_sub.unregister()
@@ -83,7 +81,7 @@ class Advancer(Drive):
         red_line_sub = rospy.Subscriber(
             "red_line_distance", Centroid, self.red_line_callback
         )
-        for _ in range(0, 9):
+        for _ in range(0, 4):
             twist = Twist()
 
             curr_err = self.stop_centroid.err
@@ -95,7 +93,7 @@ class Advancer(Drive):
             self.vel_pub.publish(twist)
             self.rate.sleep()
 
-        for _ in range(10):
+        for _ in range(4):
             self.vel_pub.publish(Twist())
             self.rate.sleep()
 
@@ -150,6 +148,7 @@ class AtLine(smach.State):
             sound_msg = Sound()
             sound_msg.value = Sound.ON
             self.sound_pub.publish(sound_msg)
+            self.red_line_num = 1
 
         return self.next_states[self.red_line_num]
 
@@ -163,4 +162,5 @@ class Turn(smach.State):
 
     def execute(self, userdata):
         simple_turn(self.turn_angle, self.pub_node)
+        self.pub_node.publish(Twist())
         return self.next_state

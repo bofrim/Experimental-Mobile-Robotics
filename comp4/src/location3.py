@@ -2,7 +2,6 @@
 import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 
-from operations import simple_turn
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from kobuki_msgs.msg import Led
@@ -16,7 +15,7 @@ from image_processing import (
     study_shapes,
 )
 
-from utils import display_count
+from utils import display_count, simple_turn
 from config_globals import *
 from collections import defaultdict
 
@@ -36,7 +35,6 @@ class Detect3(smach.State):
 
         twist = Twist()
         twist.linear.x = 0.2
-
         
         for _ in range(2):
             twist = Twist()
@@ -69,6 +67,6 @@ class Detect3(smach.State):
             rospy.sleep(0.2)
         
         
-        next_state = self.next_states[self.count]
+        next_state = self.next_states[self.count % 3]
         self.count += 1
         return next_state

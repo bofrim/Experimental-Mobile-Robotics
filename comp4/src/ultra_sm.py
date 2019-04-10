@@ -71,21 +71,23 @@ def main():
             },
         )
 
+        #63
         smach.StateMachine.add(
             "TURN_LEFT_1",
-            Turn(cmd_vel_pub, 63, "detect1"),
+            Turn(cmd_vel_pub, 60, "detect1"),
             transitions={"detect1": "DETECT1"},
         )
 
         smach.StateMachine.add(
             "DETECT1",
             Detect1(rate, sound_pub, light_pubs),
-            transitions={"turn_right": "TURN_RIGHT", "exit": "exit"},
+            transitions={"turn_right": "TURN_RIGHT_1", "exit": "exit"},
         )
 
+        # -84
         smach.StateMachine.add(
-            "TURN_RIGHT",
-            Turn(cmd_vel_pub, -84, "drive"),
+            "TURN_RIGHT_1",
+            Turn(cmd_vel_pub, -60, "drive"),
             transitions={"drive": "DRIVE"},
         )
 
@@ -109,7 +111,7 @@ def main():
 
         smach.StateMachine.add(
             "TURN_180",
-            Turn(cmd_vel_pub, 180, "drive_from_objects"),
+            Turn(cmd_vel_pub, 130, "drive_from_objects"),
             transitions={"drive_from_objects": "DRIVE_FROM_OBJECTS"},
         )
 
@@ -162,23 +164,41 @@ def main():
         )
 
         smach.StateMachine.add("ON_RAMP", OnRamp(rate), transitions={"drive": "DRIVE"})
-
+    
         smach.StateMachine.add(
             "TURN_LEFT_3_1",
-            Turn(cmd_vel_pub, 69, "detect3"),
+            Turn(cmd_vel_pub, 65, "detect3"),
             transitions={"detect3": "DETECT3"},
+        )
+
+        smach.StateMachine.add(
+            "TURN_RIGHT_3_1",
+            Turn(cmd_vel_pub, -68, "drive"),
+            transitions={"drive": "DRIVE"},
         )
 
         smach.StateMachine.add(
             "TURN_LEFT_3_2",
-            Turn(cmd_vel_pub, 92, "detect3"),
+            Turn(cmd_vel_pub, 70, "detect3"),
             transitions={"detect3": "DETECT3"},
         )
 
         smach.StateMachine.add(
+            "TURN_RIGHT_3_2",
+            Turn(cmd_vel_pub, -70, "drive"),
+            transitions={"drive": "DRIVE"},
+        )
+
+        smach.StateMachine.add(
             "TURN_LEFT_3_3",
-            Turn(cmd_vel_pub, 92, "detect3"),
+            Turn(cmd_vel_pub, 73, "detect3"),
             transitions={"detect3": "DETECT3"},
+        )
+
+        smach.StateMachine.add(
+            "TURN_RIGHT_3_3",
+            Turn(cmd_vel_pub, -69, "drive"),
+            transitions={"drive": "DRIVE"},
         )
 
         smach.StateMachine.add(
@@ -190,24 +210,6 @@ def main():
                 "turn_right_3_3": "TURN_RIGHT_3_3",
                 "exit": "exit",
             },
-        )
-
-        smach.StateMachine.add(
-            "TURN_RIGHT_3_1",
-            Turn(cmd_vel_pub, -69, "drive"),
-            transitions={"drive": "DRIVE"},
-        )
-
-        smach.StateMachine.add(
-            "TURN_RIGHT_3_2",
-            Turn(cmd_vel_pub, -92, "drive"),
-            transitions={"drive": "DRIVE"},
-        )
-
-        smach.StateMachine.add(
-            "TURN_RIGHT_3_3",
-            Turn(cmd_vel_pub, -92, "drive"),
-            transitions={"drive": "DRIVE"},
         )
 
     state_machine.execute()

@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import rospy
-import numpy
+import numpy as np
 from enum import Enum
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rospy import ROSException
 from ros_numpy import numpify
-from tf.transformations import decompose_matrix
+from tf.transformations import decompose_matrix, quaternion_from_euler
 import tf
 from kobuki_msgs.msg import Led
 
@@ -36,6 +36,20 @@ def wait_for_odom_angle(timeout=None):
     _, _, angles, _, _ = decompose_matrix(pose)
     theta = angles[2] * 180 / 3.14159
     return theta
+
+
+def simple_turn(angle, twist_pub, max_error=10, angular_scale=2.2):
+    """"""
+    theta = wait_for_odom_angle()
+    direction = np.sign(angle)
+    target_theta = standardize_theta(theta + angle)
+
+    while abs(target_theta - theta) > max_error:
+        out_twist = Twist()
+        out_twist.angular.z = direction * angular_scale
+        twist_pub.publish(out_twist)
+        theta = wait_for_odom_angle()
+        rospy.sleep(0.1)
 
 
 def display_count(
@@ -112,23 +126,22 @@ def broadcast_box_sides(
         # Find the sides of the box
         front_trans = map(sum, zip(box_trans, (-side_offset_from_middle, 0, 0.010)))
         back_trans = map(sum, zip(box_trans, (side_offset_from_middle, 0, 0.010)))
-        left_trans = map(sum, zip(box_trans, (0, -side_offset_from_middle, 0.010)))
-        right_trans = map(sum, zip(box_trans, (0, side_offset_from_middle, 0.010)))
-
+        right_trans = map(sum, zip(box_trans, (0.38, -side_offset_from_middle, 0.010)))
+        left_trans = map(sum, zip(box_trans, (0.02, side_offset_from_middle, 0.010)))
         # Publish frames to the sides of the box relative to odom
         br.sendTransform(
             front_trans, (0, 0, 0, 1), rospy.Time.now(), "box_front", global_frame
         )
         br.sendTransform(back_trans, (0, 0, 1, 0), rospy.Time.now(), "box_back", global_frame)
         br.sendTransform(
-            left_trans,
-            (0, 0, 0.70710678, 0.70710678),
+            right_trans,
+            quaternion_from_euler(0, 0, 110 * (3.14159 / 180)),   #(0, 0, 0.70710678, 0.70710678),
             rospy.Time.now(),
             "box_right",
             global_frame,
         )
         br.sendTransform(
-            right_trans,
+            left_trans,
             (0, 0, -0.70710678, 0.70710678),
             rospy.Time.now(),
             "box_left",

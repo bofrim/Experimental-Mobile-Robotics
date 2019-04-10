@@ -148,7 +148,7 @@ def study_shapes(
             + "]"
         )
         sample_count += 1
-        rate.sleep()
+
     print("stop study")
 
 
@@ -169,7 +169,7 @@ def lowest_object_coord(mask, threshold=100):
     return lowest_coord
 
 
-def count_objects(mask, threshold=1000, canvas=None):
+def count_objects(mask, threshold=700, canvas=None):
     """Count the number of distinct objects in the boolean image."""
     _, contours, _ = cv2.findContours(mask, 1, 2)
     moments = [cv2.moments(cont) for cont in contours]

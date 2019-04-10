@@ -2,7 +2,6 @@
 import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 
-from operations import simple_turn
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from kobuki_msgs.msg import Led, Sound
@@ -14,7 +13,7 @@ from image_processing import (
     get_red_mask_image_det,
 )
 
-from utils import display_count
+from utils import display_count, simple_turn
 
 class Detect1(smach.State):
     def __init__(self, rate, sound_pub, light_pubs):
@@ -45,8 +44,8 @@ class Detect1(smach.State):
         sound_msg.value = Sound.ON
         for i in range(max_count - 1):
             self.sound_pub.publish(sound_msg)
-            for _ in range(8):
-                self.rate.sleep()
+            rospy.sleep(0.3)
+
         self.sound_pub.publish(sound_msg)
 
         return "turn_right"
@@ -72,4 +71,4 @@ if __name__ == "__main__":
         cv2.imshow("window", canvas)
         cv2.waitKey(3)
         print("count", big_shape_count)
-        rate.sleep()
+        rospy.sleep(0.1)

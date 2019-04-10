@@ -3,7 +3,6 @@ import rospy, cv2, cv_bridge, numpy
 import smach, smach_ros
 from collections import defaultdict
 
-from operations import simple_turn
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from kobuki_msgs.msg import Led, Sound
@@ -22,7 +21,7 @@ from image_processing import (
 )
 import cv_bridge
 import cv2
-from utils import display_count
+from utils import display_count, simple_turn
 from config_globals import *
 
 def get_the_shape():
@@ -33,7 +32,7 @@ def get_the_shape():
 class DriveToObjects(Drive):
     def __init__(self, rate, pub_node):
         super(DriveToObjects, self).__init__(rate, pub_node, ["detect2", "exit"])
-        #self.pub_node = pub_node
+        self.speed = 0.4
 
     def execute(self, userdata):
         global g2_the_shape
@@ -45,11 +44,13 @@ class DriveToObjects(Drive):
 
             if self.path_centroid.cx == -1 or self.path_centroid.cy == -1:
                 twist = Twist()
-                twist.linear.x = -0.1
+                twist.linear.x = -0.4
 
-                for _ in range(0, 7):
+                for _ in range(0, 3):
                     self.vel_pub.publish(twist)
                     rospy.sleep(0.2)
+
+                self.vel_pub.publish(Twist())
 
                 white_line_sub.unregister()
                 return "detect2"
@@ -79,8 +80,7 @@ class DriveFromObjects(Drive):
 
             twist_msg = Twist()
 
-            # TODO: Tweak this based on red line detection
-            if self.stop_distance > 350:
+            if self.stop_distance > 400:
                 stop_sub.unregister()
                 image_sub.unregister()
 
@@ -94,7 +94,7 @@ class DriveFromObjects(Drive):
                 twist_msg.linear.x = 0.075
                 twist_msg.angular.z = -0.2
             else:
-                twist_msg.linear.x = 0.25
+                twist_msg.linear.x = 0.4
                 twist_msg.angular.z = (-float(curr_err) / 150) + (
                     -float(delta_err) / 225
                 )
@@ -122,17 +122,17 @@ class Detect2(smach.State):
         # Count objects
         global g2_the_shape
         g2_the_shape = study_shapes(
-            get_green_mask, min_samples=50, max_samples=150, confidence=0.6
+            get_green_mask, min_samples=25, max_samples=100, confidence=0.65
         )
 
         count_tally = {1: 0, 2: 0, 3: 0}
 
-        for _ in range(60):
+        for _ in range(30):
             image = rospy.wait_for_message("camera/rgb/image_raw", Image)
             red_mask = get_red_mask_image_det(image)
             green_mask = get_green_mask(image)
             shape_mask = red_mask | green_mask
-            count = count_objects(shape_mask, threshold=2000)
+            count = count_objects(shape_mask, threshold=1000)
             if count in count_tally:
                 count_tally[count] += 1
         display_count(max(count_tally, key=count_tally.get), self.light_pubs)
@@ -141,8 +141,8 @@ class Detect2(smach.State):
         sound_msg.value = Sound.ON
         for i in range(max(count_tally, key=count_tally.get) - 1):
             self.sound_pub.publish(sound_msg)
-            for _ in range(8):
-                self.rate.sleep()
+            rospy.sleep(0.3)
+
         self.sound_pub.publish(sound_msg)
 
         print("Counted:", max(count_tally, key=count_tally.get))

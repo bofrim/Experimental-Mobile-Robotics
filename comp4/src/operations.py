@@ -2,7 +2,7 @@
 import rospy
 import numpy as np
 from geometry_msgs.msg import Twist
-from utils import wait_for_odom_angle, angle_ramp
+from utils import wait_for_odom_angle, angle_ramp, standardize_theta
 from comp2.msg import Centroid
 
 g_centroid = Centroid()
@@ -11,14 +11,9 @@ g_prev_err = 0
 
 def simple_turn(angle, twist_pub, max_error=3, anglular_scale=1.0):
     """"""
-    init_theta = wait_for_odom_angle()
-    theta = init_theta
+    theta = wait_for_odom_angle()
     direction = np.sign(angle)
-    target_theta = init_theta + angle
-    if target_theta > 180:
-        target_theta = target_theta % 360 - 360
-    if target_theta < -180:
-        target_theta = target_theta % -360 + 360
+    target_theta = standardize_theta(theta + angle)
 
     while abs(target_theta - theta) > max_error:
         out_twist = Twist()

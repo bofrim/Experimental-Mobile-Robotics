@@ -27,7 +27,7 @@ from image_processing import study_shapes, get_red_mask, get_red_mask_image_det
 from sensor_msgs.msg import Joy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from kobuki_msgs.msg import Led, Sound
-from utils import display_count, broadcast_box_sides, wait_for_odom_angle, extract_angle
+from utils import display_count, broadcast_box_sides, wait_for_odom_angle, extract_angle, standardize_theta
 from operations import simple_turn
 from config_globals import *
 
@@ -275,13 +275,14 @@ class TagScan2(smach.State):
         self.client.send_goal(goal_pose)
         self.client.wait_for_result()
 
-    def scan(self):
+    def scan(self, max_error=3):
         global g4_target_location
-        start_angle = wait_for_odom_angle()
+        target_theta = standardize_theta(wait_for_odom_angle()-150)
         while (
-            self.ar_focus_id == -1 or self.target_repetitions < 3
+            self.ar_focus_id not in set([1, 2, 3, 4, 5]) or self.target_repetitions < 3
         ) and not rospy.is_shutdown():
-            if abs(wait_for_odom_angle() - start_angle) > 100:
+            if abs(target_theta - wait_for_odom_angle()) < max_error:
+                print "NOT FOUND - ASSUMING WAYPOINT 3"
                 g4_target_location = WAYPOINT_MAP["3"]
                 self.found_target = True
                 return

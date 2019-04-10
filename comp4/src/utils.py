@@ -76,6 +76,15 @@ def angle_ramp(desired_angle, current_angle, scale=0.3, ramp_denominator=90):
     return rotation_direction * rotation_ramp * scale
 
 
+def standardize_theta(angle):
+    target_theta = angle
+    if angle >= 180:
+        target_theta = angle % 360 - 360
+    if angle < -180:
+        target_theta = angle % -360 + 360
+    return target_theta
+
+
 def broadcast_box_sides(
     br,
     listen,

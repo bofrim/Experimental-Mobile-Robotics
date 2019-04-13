@@ -59,26 +59,33 @@ Competition 3 introduces the ROS navigation stack, recognizing AR-Tags, and crea
 
 #### Competition 5: Game Strategy
 Competition 4 is then followed by Competition 5, the final competition of the course. Competition 5 uses the same course as competition 4 but no mandatory tasks and a brand new marking scheme. Participants must evaluate the marking scheme and create a strategy to obtain the most amount of points in their 10 min attempt.
-
-### Competition Structure
-TODO
   
-### Repository Structure
-TODO
+## Repository Structure
+The structure of this repository acts as the contents of the src folder of the ROS catkin workpace. Each demo and competition is an individual catkin package, which allows for easy setup and support for future competitions. 
+
+This repository is the src folder of the catkin workspace with each demo and competition as a seperate ROS catkin package. This layout allows for easy setup and updating the repo. 
   
 ## Getting Started
-TODO>
+Installing and running the projects in this repo assume that you are comfortable with ROS and catkin. Consider consulting the ROS [official tutorials](http://wiki.ros.org/ROS/StartGuide) if you are unfamiliar with ROS or catkin. 
   
+### Hardware Requirements
+The demos and competitions in this repo assume that the user has access to:
+- Turtlebot 2
+- Asus Xtion Pro RGB-D Camera
+- USB Camera
+- Logitech Controller
+- Laptop with 4 USB 2.0/3.0 Ports. (Warning: a USB hub may be used however we have found restrictions when using both the RGB-D camera and USB-cam on the same hub)
+
 ### Environment
-TODO
-  
-### Installing Requirements
-TODO
+This repo was developed on ROS Kinetic Kane on Ubuntu 16.04. ROS Kinetic is suppored on [multiple OS's](http://wiki.ros.org/kinetic/Installation), however we recommend Ubuntu 16.04 for the best results. The ROS Kinetic Kane installation for Ubuntu 16.04 can be found [here](http://wiki.ros.org/kinetic/Installation/Ubuntu)
 
 ### Setting up a Catkin Workspace
-TODO
+After ROS is properly installed a catkin workspace needs to be created for the demos and competitions found in this repo. Consult the official ROS documentation for setting up a [new catkin workspace](http://wiki.ros.org/catkin/Tutorials/create_a_workspace). 
 
 ### Installing this Repo
-TODO
-  
+The structure of this project allows for easy installation and setup.
+
+1. Navigate to the src folder of your catkin workspace: `cd {catkin_workspace}/src/`
+
+
  MORE TODO

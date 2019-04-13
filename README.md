@@ -88,19 +88,16 @@ The structure of this project allows for easy installation and setup.
 1. Navigate to the src folder of your catkin workspace
 
 `cd {catkin_workspace}/src/`
-&nbsp; 
 
 2. Clone this repo 
 
 `git clone https://github.com/bofrim/CMPUT_412.git`
-&nbsp; 
 
 3. Navigate to the root directory for your catkin workspace and build all the demos and competitions. 
 
 `cd ..`
 
 `catkin_make`
-&nbsp; 
 
 
- MORE TODO
+... and you're done setting up this repo! Please note that each competition may require installation of other ROS packages or resources. Consult the pdf in each competition folder for instructions on installation and running each competition. 

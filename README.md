@@ -8,11 +8,16 @@ More information on the course can be found [here](https://www.ualberta.ca/compu
 
 [Here is a sample of some of some of the course work](https://www.youtube.com/watch?v=_7_xZwPJDx8) and [here is the code for that sample](https://github.com/bofrim/CMPUT_412/tree/master/demo7).
 
+&nbsp;
+
 ## Purpose of This Document
 This document is intended to serve as a springboard for you to start your journey with mobile robotics. We will provide you with a few backround concepts, some links to useful resources, and a description of how to get our code up and running. The intended audience of this document is anyone with a [passion for robotics and the willingness to learn](https://github.com/kiloreux/awesome-robotics). Aside from during the description of how this package is used, we do not assume that the reader has any backround in robotics concepts or really any other special technical background. When we describe how to setup and use this package we do assume that you have access to a [TurtleBot](https://www.turtlebot.com), you have a laptop with a copy of [Ubuntu 16.04 LTS](http://releases.ubuntu.com/16.04/) installed, and you are [familiar enough](https://help.ubuntu.com/community/UsingTheTerminal) with the Ubuntu operating system to navigate and install software. Let's get started!
 
+&nbsp;
+
 ## Backgound
 Mobile Robotics is an [exciting field](https://www.nasa.gov/mission_pages/msl/index.html) with many [high value applicaitons](https://www.youtube.com/watch?v=zMTCMhy_MP4). We will provide a brief overview of some of the fundamental concepts used in the field of mobile robotics in order to get you up to speed.
+
 #### ROS
 > "The Robot Operating System (ROS) is a flexible framework for writing robot software. It is a collection of tools, libraries, and conventions that aim to simplify the task of creating complex and robust robot behavior across a wide variety of robotic platforms."
 ([Source](http://www.ros.org/about-ros/))
@@ -21,11 +26,13 @@ ROS is a fantastic platform to aid in the development of robotics. It provides a
 
 #### TurtleBot
 The [TurtleBot](https://www.turtlebot.com) is a robot kit that provides the user with all of the components they need to start developing robots. It's main component is a base platform with a few wheels and a variety of sensors. You can find [tutorials](http://wiki.ros.org/Robots/TurtleBot#Robots.2BAC8-TurtleBot.2BAC8-kinetic.TurtleBot2) for getting started with the TurtleBot and quickly begin running demos or developing your own programs.
+
 #### Mobile Robotic Concepts
 [Mobile robotics](https://www.robotshop.com/community/tutorials/show/basics-what-types-of-mobile-robots-are-there) is a diverse field with a variety of cool, useful, and fun applications. Mobile robots usually consist of some form of robots base. The base will have some way to move around an environment. There are a variety of approaches that can be used for robot locomotion it could be wheels, tracks, legs, propellers, wings, rocket thrusters, or [something else](https://www.youtube.com/watch?v=divLsTtA5vk). The mobile robot also needs a way to derive feedback from it environnt. It may use a camera, light sensor, bump sensor, laser scanner, wisker sensor, sonar, lidar, some other kind of environmental feedback sensor, or it may employ a combination of a few different sensors. Sensor data can be used to help the robot navigate its surroundings or perform tasks.
 
 ##### Line Following
 A [really cool but relatively simple demo](https://answers.ros.org/question/58443/line-following-in-ros/) for a mobile robot is to draw a line on the ground and then create a robot that will follow that line. Line following robots are a good way to start to learn some basic computer vision concepts as well as to learn how to write [simple control systems](https://www.youtube.com/watch?v=UR0hOmjaHp0).
+
 ##### Computer Vision
 One of the main ways a robot can take in information from it environment is through some kind of camera. Computer vision processing can be applied to the input from a camera to help a robot determine what is happening around it. There are tons of great pre-made libraries allow you to use computer vision techniques withouth the need to know exactly how the algorithms work (even though they are pretty cool and you should [look into it](https://github.com/AGV-IIT-KGP/awesome-computer-vision#university-courses-and-moocs) if you get the chance).
 
@@ -34,13 +41,17 @@ One of the most popular computer vision libraries out there is [OpenCV](https://
 * [Create threshold masks](https://docs.opencv.org/3.4/d7/d4d/tutorial_py_thresholding.html)
 * [Count objects and detect shapes](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_contours/py_contours_begin/py_contours_begin.html)
 * [And so much more!](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_tutorials.html)
+
 ##### Localization and Mapping
 When your robot moves around, it is handy if it knows where it is. The concepts of localization and mapping are used to give robots the context of where it is in it's environment. Mapping is the process of collecting data about the surroundings of a robot and using it to build up a representation of the robot's environment in a format that is easy for the robot to understand. Localization involves using a robot's sensors to [statistically determine where to robot is](http://www.cim.mcgill.ca/~yiannis/particletutorial.pdf) relative to a map. Together localization and mapping can be used to help a robot navigate safely through it'senvironment.
 
 A very useful ROS package to help with localization and mapping is [AMCL](http://wiki.ros.org/amcl). AMCL can be used to find and track a robot's location within a prebuilt map. This is very useful for navigation with a TurtleBot.
+
 ##### Other Concepts You Should Look Into
 * Coordinate frames
 TODO
+
+&nbsp;
 
 ## [CMPUT 412](https://www.youtube.com/watch?v=dQw4w9WgXcQ) Competitions
 CMPUT 412's competitions were designed to introduce new challenges while building upon the last competition's implementation. 
@@ -60,11 +71,15 @@ Competition 3 introduces the ROS navigation stack, recognizing AR-Tags, and crea
 #### Competition 5: Game Strategy
 Competition 4 is then followed by Competition 5, the final competition of the course. Competition 5 uses the same course as competition 4 but no mandatory tasks and a brand new marking scheme. Participants must evaluate the marking scheme and create a strategy to obtain the most amount of points in their 10 min attempt.
   
+&nbsp;
+  
 ## Repository Structure
 The structure of this repository acts as the contents of the src folder of the ROS catkin workpace. Each demo and competition is an individual catkin package, which allows for easy setup and support for future competitions. 
 
 This repository is the src folder of the catkin workspace with each demo and competition as a seperate ROS catkin package. This layout allows for easy setup and updating the repo. 
   
+&nbsp;  
+
 ## Getting Started
 Installing and running the projects in this repo assume that you are comfortable with ROS and catkin. Consider consulting the ROS [official tutorials](http://wiki.ros.org/ROS/StartGuide) if you are unfamiliar with ROS or catkin. 
   

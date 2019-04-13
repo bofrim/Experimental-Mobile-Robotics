@@ -40,30 +40,30 @@ When your robot moves around, it is handy if it knows where it is. The concepts 
 A very useful ROS package to help with localization and mapping is [AMCL](http://wiki.ros.org/amcl). AMCL can be used to find and track a robot's location within a prebuilt map. This is very useful for navigation with a TurtleBot.
 ##### Other Concepts You Should Look Into
 * Coordinate frames
-<TODO>
+TODO
 
 ## [CMPUT 412](https://www.youtube.com/watch?v=dQw4w9WgXcQ) Competitions
-<TODO>
+TODO
   
 ### Competition Structure
-<TODO>
+TODO
   
 ### Repository Structure
-<TODO>
+TODO
   
 ## Getting Started
-<TODO>
+TODO>
   
 ### Environment
- <TODO>
+TODO
   
 ### Installing Requirements
-<TODO>
+TODO
 
 ### Setting up a Catkin Workspace
-<TODO>
+TODO
 
 ### Installing this Repo
-<TODO>
+TODO
   
  MORE TODO

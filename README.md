@@ -48,16 +48,16 @@ CMPUT 412's competitions were designed to introduce new challenges while buildin
 #### Competition 1: Pursuit and Evasion
 "Pursuit and Evasion" is the first competition of CMPUT 412. The main focus of this competition is for participants to get comfortable with the turtlebot's movement and working with the Asus Xtion Pro RGB-D camera. More information on the competition and running the code can be found in the /comp1/Competition1Report.pdf document in this repo.
 
-### Competition 2: Run, Robot Run
+#### Competition 2: Run, Robot Run
 "Run, Robot Run" builds on top of Competition 1 by introducing a race-track shaped loop and object recognition tasks. Participants must use image recongition libraries such as OpenCV to follow the white line, stop at red lines, and complete the object recognition tasks located throughout the course. More information on Competition 2 can be found in the /comp2/Competition2Report.pdf document in this repo. 
 
-### Competition 3: Parking with GMapping, AMCL, and ARTags.
+#### Competition 3: Parking with GMapping, AMCL, and ARTags.
 Competition 3 introduces the ROS navigation stack, recognizing AR-Tags, and create/using a map a file of the turtlebot's environment. The competition builds on top of the course used in Competition 2 by introducing a fourth location that is indicated by a 'off-ramp' in the course. Participants must use a map file to navigate through the new location, scan for objects, and park at specific parking spots. More information on Competition3 can be found in the /comp3/Competition3Report.pd document in this repo. 
 
-### Competition 4: Box-Pushing & Parking with the ROS Navigation stack
+#### Competition 4: Box-Pushing & Parking with the ROS Navigation stack
 "Box-Pushing & Parking with the ROS Navigation stack" builds upon all previous topics covered in the course by introducing a new task, box pushing. Compeition 4 uses the same course as Competition 3 however the previous Location 4 parking task is replaced with pushing an AR-Tag covered box from one parking spot to another. No new topics are introduced, however participants must use their knowledge developed in the previous three competitions to identify, approach, and push the box. 
 
-### Competition 5: Game Strategy
+#### Competition 5: Game Strategy
 Competition 4 is then followed by Competition 5, the final competition of the course. Competition 5 uses the same course as competition 4 but no mandatory tasks and a brand new marking scheme. Participants must evaluate the marking scheme and create a strategy to obtain the most amount of points in their 10 min attempt.
 
 ### Competition Structure

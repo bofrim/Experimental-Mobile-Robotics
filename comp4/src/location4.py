@@ -241,7 +241,7 @@ class TagScan1(smach.State):
         while (
             self.ar_focus_id not in set([1, 2, 3, 4, 5]) or self.target_repetitions < 3
         ) and not rospy.is_shutdown():
-            if abs(wait_for_odom_angle() - start_angle) > 110:
+            if abs(wait_for_odom_angle() - start_angle) > 104:
                 return
             twist = Twist()
             twist.angular.z = 0.3
@@ -435,7 +435,7 @@ class Push(smach.State):
         #TODO: Possibly add in case where distance is increasing (driving the wrong way)
         while self.distance_to_target > 0.45:
             twist = Twist()
-            twist.linear.x = SPEED
+            twist.linear.x = SPEED * 0.8
             twist.angular.z = self.kp * self.curr_error
 
             self.pub_node.publish(twist)

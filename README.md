@@ -10,6 +10,29 @@ More information on the course can be found [here](https://www.ualberta.ca/compu
 
 &nbsp;
 
+                  ,--.    ,--.
+                 ((O ))--((O ))
+               ,'_`--'____`--'_`.
+              _:  ____________  :_
+             | | ||::::::::::|| | |
+             |_| |/__________\| |_|
+               |________________|
+            __..-'            `-..__
+         .-| : .----------------. : |-.
+       ,\ || | |\______________/| | || /.
+      /`.\:| | ||  __  __  __  || | |;/,'\
+     :`-._\;.| || '--''--''--' || |,:/_.-':
+     :,--.;  | ||  (_) (_) (_) || |  :,--.;
+     (`-'|)  | ||______________|| |  (|`-')
+      `--'   | |/______________\| |   `--'
+             |____________________|
+              `.________________,'
+               (_______)(_______)
+              |        ||        |
+              '--------''--------'
+
+http://ascii.co.uk/art/robot
+
 ## Purpose of This Document
 This document is intended to serve as a springboard for you to start your journey with mobile robotics. We will provide you with a few backround concepts, some links to useful resources, and a description of how to get our code up and running. The intended audience of this document is anyone with a [passion for robotics and the willingness to learn](https://github.com/kiloreux/awesome-robotics). Aside from during the description of how this package is used, we do not assume that the reader has any backround in robotics concepts or really any other special technical background. When we describe how to setup and use this package we do assume that you have access to a [TurtleBot](https://www.turtlebot.com), you have a laptop with a copy of [Ubuntu 16.04 LTS](http://releases.ubuntu.com/16.04/) installed, and you are [familiar enough](https://help.ubuntu.com/community/UsingTheTerminal) with the Ubuntu operating system to navigate and install software. Let's get started!
 

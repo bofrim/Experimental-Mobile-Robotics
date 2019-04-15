@@ -8,8 +8,6 @@ More information on the course can be found [here](https://www.ualberta.ca/compu
 
 [Here is a sample of some of some of the course work](https://www.youtube.com/watch?v=_7_xZwPJDx8) and [here is the code for that sample](https://github.com/bofrim/CMPUT_412/tree/master/demo7).
 
-&nbsp;
-
                   ,--.    ,--.
                  ((O ))--((O ))
                ,'_`--'____`--'_`.
@@ -30,7 +28,6 @@ More information on the course can be found [here](https://www.ualberta.ca/compu
                (_______)(_______)
               |        ||        |
               '--------''--------'
-
 http://ascii.co.uk/art/robot
 
 ## Purpose of This Document
